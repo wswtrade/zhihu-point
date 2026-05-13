@@ -584,7 +584,7 @@ function renderRadar3D(){
     var cv=document.createElement('canvas');cv.width=512;cv.height=64;
     var cx=cv.getContext('2d');cx.clearRect(0,0,512,64);
     cx.font='bold 28px "Noto Sans SC",sans-serif';
-    cx.fillStyle='#FFFFFF';cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillStyle='#1A1A1A';cx.textAlign='center';cx.textBaseline='middle';
     var display=(it.Title||'').length>12?(it.Title||'').slice(0,12)+'…':(it.Title||'');
     cx.fillText('#'+(i+1)+' '+display,256,32);
     var tex=new THREE.CanvasTexture(cv);tex.needsUpdate=true;
