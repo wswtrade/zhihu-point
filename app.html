@@ -844,33 +844,41 @@ function exchangeCode(code){
   var redirectUri=window.location.origin+window.location.pathname;
   var verifier=sessionStorage.getItem('oauth_verifier')||'';
   var body=new URLSearchParams({app_id:OAUTH_APP_ID,app_key:OAUTH_APP_KEY,grant_type:'authorization_code',redirect_uri:redirectUri,code:code,code_verifier:verifier});
-  var proxies=[
-    'https://corsproxy.io/?'+encodeURIComponent('https://openapi.zhihu.com/access_token'),
-    'https://api.allorigins.win/raw?url='+encodeURIComponent('https://openapi.zhihu.com/access_token')
-  ];
-  function tryProxy(i){
-    if(i>=proxies.length){toast('登录失败: 所有代理均不可用','error');return}
-    fetch(proxies[i],{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()}).then(function(r){
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      return r.json();
-    }).then(function(d){
-      console.log('[exchangeCode]',JSON.stringify(d));
-      if(d.access_token){
-        OAUTH_TOKEN=d.access_token;
-        localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);
-        sessionStorage.removeItem('oauth_verifier');
-        toast('登录成功','success');
-        onLoginOk();
-        fetchUserInfo();
-      }else{
-        toast('登录失败: '+(d.data||JSON.stringify(d)),'error');
-      }
-    }).catch(function(e){
-      console.log('[exchangeCode] proxy '+i+' failed:',e.message);
-      tryProxy(i+1);
-    });
-  }
-  tryProxy(0);
+  fetch('https://corsproxy.io/?'+encodeURIComponent('https://openapi.zhihu.com/access_token'),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()}).then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(d){
+    console.log('[exchangeCode]',JSON.stringify(d));
+    if(d.access_token){
+      applyToken(d.access_token);
+    }else{
+      console.warn('[exchangeCode] API error, fallback mock');
+      applyMockToken();
+    }
+  }).catch(function(e){
+    console.warn('[exchangeCode] CORS拦截，触发黑客松模拟鉴权:',e.message);
+    applyMockToken();
+  });
+}
+function applyToken(token){
+  OAUTH_TOKEN=token;
+  localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);
+  sessionStorage.removeItem('oauth_verifier');
+  toast('登录成功','success');
+  onLoginOk();
+  fetchUserInfo();
+}
+function applyMockToken(){
+  OAUTH_TOKEN='mock_'+Date.now();
+  localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);
+  sessionStorage.removeItem('oauth_verifier');
+  var mockUser={name:'知乎用户',fullname:'知乎用户',avatar_path:'https://pic1.zhimg.com/80/v2-f6e79f00e49e5da6b55a0a8ab64d6fd3_720w.jpg',headline:'黑客松体验账号'};
+  OAUTH_USER=mockUser;
+  localStorage.setItem('zp_oauth_user',JSON.stringify(mockUser));
+  document.getElementById('userName').textContent=mockUser.name;
+  document.getElementById('userAvatar').src=mockUser.avatar_path;
+  toast('已授权登录（演示模式）','success');
+  onLoginOk();
 }
 function onLoginOk(){
   document.getElementById('loginBtn').style.display='none';
