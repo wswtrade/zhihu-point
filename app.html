@@ -155,7 +155,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
     <h2 id="pageTitle">热点雷达</h2>
     <div class="topbar-r">
       <span id="connStatus" style="font-size:11px;color:var(--text2)"></span>
-      <span id="userInfo" style="display:none;font-size:12px;color:var(--text);margin-right:6px"><img id="userAvatar" style="width:22px;height:22px;border-radius:50%;vertical-align:middle;margin-right:4px"><span id="userName"></span></span>
+      <span id="userInfo" style="display:none;align-items:center;gap:4px;font-size:12px;color:var(--text);margin-right:6px;background:var(--hover);padding:3px 10px 3px 4px;border-radius:16px;border:1px solid var(--border)"><img id="userAvatar" style="width:22px;height:22px;border-radius:50%;vertical-align:middle"><span id="userName" style="font-weight:500"></span></span>
       <button class="btn btn-s" id="loginBtn" onclick="doOAuthLogin()"><i class="fas fa-sign-in-alt"></i> 登录知乎</button>
       <button class="btn btn-s" id="logoutBtn" style="display:none" onclick="zhihuLogout()"><i class="fas fa-sign-out-alt"></i> 退出</button>
       <button class="btn btn-s" onclick="openSettings()"><i class="fas fa-cog"></i> 设置</button>
@@ -849,20 +849,31 @@ function doOAuthLogin(){
 function exchangeCode(code){
   var redirectUri=window.location.origin+window.location.pathname;
   var params='app_id='+encodeURIComponent(OAUTH_APP_ID)+'&app_key='+OAUTH_APP_KEY+'&app_secret='+encodeURIComponent(OAUTH_APP_SECRET)+'&grant_type=authorization_code&redirect_uri='+encodeURIComponent(redirectUri)+'&code='+code;
-  toast('正在交换Token...','info');
+  console.log('[exchangeCode] redirectUri:',redirectUri);
+  console.log('[exchangeCode] params:',params);
   fetch('https://openapi.zhihu.com/access_token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params}).then(function(r){
-    if(!r.ok)throw new Error('HTTP '+r.status);
+    console.log('[exchangeCode] status:',r.status);
     return r.json();
   }).then(function(d){
-    console.log('[exchangeCode] response:',d);
-    if(d.access_token){OAUTH_TOKEN=d.access_token;localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);toast('登录成功','success');onLoginOk();fetchUserInfo()}
-    else{toast('获取Token失败: '+(d.error||d.message||JSON.stringify(d)),'error')}
-  }).catch(function(e){console.log('[exchangeCode] error:',e);toast('Token交换失败: '+e.message,'error')});
+    console.log('[exchangeCode] response:',JSON.stringify(d));
+    if(d.access_token){
+      OAUTH_TOKEN=d.access_token;
+      localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);
+      toast('登录成功','success');
+      onLoginOk();
+      fetchUserInfo();
+    }else{
+      toast('登录失败: '+JSON.stringify(d),'error');
+    }
+  }).catch(function(e){
+    console.log('[exchangeCode] error:',e);
+    toast('登录失败: '+e.message,'error');
+  });
 }
 function onLoginOk(){
   document.getElementById('loginBtn').style.display='none';
   document.getElementById('logoutBtn').style.display='';
-  document.getElementById('userInfo').style.display='';
+  document.getElementById('userInfo').style.display='flex';
 }
 function zhihuLogout(){
   OAUTH_TOKEN='';OAUTH_USER=null;
