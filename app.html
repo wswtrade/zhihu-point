@@ -848,39 +848,23 @@ function doOAuthLogin(){
 }
 function exchangeCode(code){
   var redirectUri=window.location.origin+window.location.pathname;
-  var iframe=document.createElement('iframe');
-  iframe.name='token_frame';
-  iframe.style.display='none';
-  document.body.appendChild(iframe);
-  var form=document.createElement('form');
-  form.method='POST';
-  form.action='https://openapi.zhihu.com/access_token';
-  form.target='token_frame';
-  var fields={app_id:OAUTH_APP_ID,app_key:OAUTH_APP_KEY,app_secret:OAUTH_APP_SECRET,grant_type:'authorization_code',redirect_uri:redirectUri,code:code};
-  Object.keys(fields).forEach(function(k){var inp=document.createElement('input');inp.type='hidden';inp.name=k;inp.value=fields[k];form.appendChild(inp)});
-  document.body.appendChild(form);
-  form.submit();
-  toast('正在登录...','info');
-  setTimeout(function(){
-    try{
-      var doc=iframe.contentDocument||iframe.contentWindow.document;
-      var text=doc.body?doc.body.innerText:'';
-      var d=JSON.parse(text);
-      if(d.access_token){
-        OAUTH_TOKEN=d.access_token;
-        localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);
-        toast('登录成功','success');
-        onLoginOk();
-        fetchUserInfo();
-      }else{
-        toast('登录失败: '+(d.error||d.message||JSON.stringify(d)),'error');
-      }
-    }catch(e){
-      toast('登录失败: 无法读取响应','error');
+  var params='app_id='+encodeURIComponent(OAUTH_APP_ID)+'&app_key='+OAUTH_APP_KEY+'&grant_type=authorization_code&redirect_uri='+encodeURIComponent(redirectUri)+'&code='+code;
+  fetch('https://corsproxy.io/?'+encodeURIComponent('https://openapi.zhihu.com/access_token'),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params}).then(function(r){
+    return r.json();
+  }).then(function(d){
+    console.log('[exchangeCode]',JSON.stringify(d));
+    if(d.access_token){
+      OAUTH_TOKEN=d.access_token;
+      localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);
+      toast('登录成功','success');
+      onLoginOk();
+      fetchUserInfo();
+    }else{
+      toast('登录失败: '+(d.data||JSON.stringify(d)),'error');
     }
-    document.body.removeChild(iframe);
-    document.body.removeChild(form);
-  },3000);
+  }).catch(function(e){
+    toast('登录失败: '+e.message,'error');
+  });
 }
 function onLoginOk(){
   document.getElementById('loginBtn').style.display='none';
