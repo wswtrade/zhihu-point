@@ -633,31 +633,10 @@ function openZhishi(i){var k=knowledge[i];if(!k)return;var st=esc(k.title).repla
 
 function oauthFetch(path){
   if(!OAUTH_TOKEN){toast('请先登录知乎','error');return Promise.reject(new Error('未登录'))}
-  return fetch('https://openapi.zhihu.com'+path,{headers:{'Authorization':'Bearer '+OAUTH_TOKEN}}).then(function(r){return r.json()});
+  var url='https://corsproxy.io/?'+encodeURIComponent('https://openapi.zhihu.com'+path);
+  return fetch(url,{headers:{'Authorization':'Bearer '+OAUTH_TOKEN}}).then(function(r){return r.json()});
 }
-function fetchFollowing(){
-  if(!OAUTH_TOKEN){toast('请先登录知乎','error');return}
-  oauthFetch('/user/followed').then(function(d){
-    var items=Array.isArray(d)?d:(d.data||[]);
-    renderFL(items.map(function(u){return{Name:u.fullname,Description:u.headline||u.description||'',AvatarUrl:u.avatar_path||'',Url:u.url||''}}),'关注的人');
-  }).catch(function(e){toast('加载失败: '+e.message,'error')});
-}
-function fetchFollowers(){
-  if(!OAUTH_TOKEN){toast('请先登录知乎','error');return}
-  oauthFetch('/user/followers').then(function(d){
-    var items=Array.isArray(d)?d:(d.data||[]);
-    renderFL(items.map(function(u){return{Name:u.fullname,Description:u.headline||u.description||'',AvatarUrl:u.avatar_path||'',Url:u.url||''}}),'我的粉丝');
-  }).catch(function(e){toast('加载失败: '+e.message,'error')});
-}
-function fetchFeed(){
-  if(!OAUTH_TOKEN){toast('请先登录知乎','error');return}
-  oauthFetch('/user/moments').then(function(d){
-    var items=(d&&d.data)||[];
-    renderFeed(items.map(function(m){return{Title:(m.target&&m.target.title)||'',ContentText:(m.target&&m.target.excerpt)||'',AuthorName:((m.target&&m.target.author&&m.target.author.name)||(m.actor&&m.actor.name))||'',ActionText:m.action_text||''}}));
-  }).catch(function(e){toast('加载失败: '+e.message,'error')});
-}
-function renderFL(d,label){document.getElementById('followEmpty').style.display='none';var items=Array.isArray(d)?d:[];document.getElementById('followList').innerHTML='<h3 style="font-size:14px;font-weight:600;margin-bottom:10px">'+esc(label)+' ('+items.length+')</h3>'+items.map(function(u){return'<div class="fc"><div class="fav">'+(u.AvatarUrl?'<img src="'+esc(u.AvatarUrl)+'" style="width:32px;height:32px;border-radius:50%;object-fit:cover">':'👤')+'</div><div class="fi"><div class="fn">'+esc(u.Name||u.name||u.username||'未知用户')+'</div><div class="fd">'+esc((u.Description||u.description||u.bio||'').slice(0,60))+'</div></div></div>'}).join('');document.getElementById('feedList').innerHTML=''}
-function renderFeed(d){document.getElementById('followEmpty').style.display='none';document.getElementById('followList').innerHTML='';var items=Array.isArray(d)?d:[];document.getElementById('feedList').innerHTML='<h3 style="font-size:14px;font-weight:600;margin-bottom:10px">关注动态 ('+items.length+')</h3>'+items.map(function(f){return'<div class="card"><div style="font-weight:600;font-size:13px;margin-bottom:4px">'+esc(f.Title||f.title||'')+' <span style="font-size:12px;color:var(--text2);font-weight:400">· '+esc(f.AuthorName||f.author_name||'')+(f.ActionText?' · '+esc(f.ActionText):'')+'</span></div><p style="font-size:13px;color:var(--text2);line-height:1.6">'+esc((f.ContentText||f.content||'').slice(0,150))+'</p></div>'}).join('')}
+
 
 function getContext(){
   var pg=document.querySelector('.page.active');
@@ -841,30 +820,57 @@ function showSmDetail(p){
 
 var OAUTH_TOKEN='',OAUTH_USER=null;
 
+function generateRandomString(len){
+  var arr=new Uint32Array(len);
+  window.crypto.getRandomValues(arr);
+  return Array.from(arr,function(d){return('0'+d.toString(16)).substr(-2)}).join('').substring(0,len);
+}
+function sha256Base64Url(str){
+  var encoder=new TextEncoder();
+  return window.crypto.subtle.digest('SHA-256',encoder.encode(str)).then(function(buf){
+    return btoa(String.fromCharCode.apply(null,new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  });
+}
 function doOAuthLogin(){
+  var verifier=generateRandomString(64);
+  sessionStorage.setItem('oauth_verifier',verifier);
   var redirectUri=window.location.origin+window.location.pathname;
-  var url='https://openapi.zhihu.com/authorize?app_id='+encodeURIComponent(OAUTH_APP_ID)+'&response_type=code&redirect_uri='+encodeURIComponent(redirectUri);
-  window.location.href=url;
+  sha256Base64Url(verifier).then(function(challenge){
+    var url='https://openapi.zhihu.com/authorize?app_id='+encodeURIComponent(OAUTH_APP_ID)+'&response_type=code&redirect_uri='+encodeURIComponent(redirectUri)+'&code_challenge='+encodeURIComponent(challenge)+'&code_challenge_method=S256';
+    window.location.href=url;
+  });
 }
 function exchangeCode(code){
   var redirectUri=window.location.origin+window.location.pathname;
-  var params='app_id='+encodeURIComponent(OAUTH_APP_ID)+'&app_key='+OAUTH_APP_KEY+'&grant_type=authorization_code&redirect_uri='+encodeURIComponent(redirectUri)+'&code='+code;
-  fetch('https://corsproxy.io/?'+encodeURIComponent('https://openapi.zhihu.com/access_token'),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params}).then(function(r){
-    return r.json();
-  }).then(function(d){
-    console.log('[exchangeCode]',JSON.stringify(d));
-    if(d.access_token){
-      OAUTH_TOKEN=d.access_token;
-      localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);
-      toast('登录成功','success');
-      onLoginOk();
-      fetchUserInfo();
-    }else{
-      toast('登录失败: '+(d.data||JSON.stringify(d)),'error');
-    }
-  }).catch(function(e){
-    toast('登录失败: '+e.message,'error');
-  });
+  var verifier=sessionStorage.getItem('oauth_verifier')||'';
+  var body=new URLSearchParams({app_id:OAUTH_APP_ID,app_key:OAUTH_APP_KEY,grant_type:'authorization_code',redirect_uri:redirectUri,code:code,code_verifier:verifier});
+  var proxies=[
+    'https://corsproxy.io/?'+encodeURIComponent('https://openapi.zhihu.com/access_token'),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent('https://openapi.zhihu.com/access_token')
+  ];
+  function tryProxy(i){
+    if(i>=proxies.length){toast('登录失败: 所有代理均不可用','error');return}
+    fetch(proxies[i],{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()}).then(function(r){
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.json();
+    }).then(function(d){
+      console.log('[exchangeCode]',JSON.stringify(d));
+      if(d.access_token){
+        OAUTH_TOKEN=d.access_token;
+        localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);
+        sessionStorage.removeItem('oauth_verifier');
+        toast('登录成功','success');
+        onLoginOk();
+        fetchUserInfo();
+      }else{
+        toast('登录失败: '+(d.data||JSON.stringify(d)),'error');
+      }
+    }).catch(function(e){
+      console.log('[exchangeCode] proxy '+i+' failed:',e.message);
+      tryProxy(i+1);
+    });
+  }
+  tryProxy(0);
 }
 function onLoginOk(){
   document.getElementById('loginBtn').style.display='none';
@@ -880,10 +886,6 @@ function zhihuLogout(){
   document.getElementById('userName').textContent='';
   document.getElementById('userAvatar').src='';
   toast('已退出登录','success');
-}
-function oauthFetch(path){
-  if(!OAUTH_TOKEN){toast('请先登录知乎','error');return Promise.reject(new Error('未登录'))}
-  return fetch('https://openapi.zhihu.com'+path,{headers:{'Authorization':'Bearer '+OAUTH_TOKEN}}).then(function(r){return r.json()});
 }
 function fetchUserInfo(){
   if(!OAUTH_TOKEN)return;
