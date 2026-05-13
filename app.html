@@ -11,6 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
 :root{--bg:#FAF7F2;--card:#FFF;--text:#1A1A1A;--text2:#6B6356;--accent:#D97706;--accent2:#F59E0B;--border:#E8E0D4;--sidebar:#F3EDE3;--hover:#FFF8F0;--success:#16A34A;--danger:#DC2626;--info:#2563EB;--purple:#9333EA;--warm:#EA580C;--teal:#0D9488;--rose:#E11D48;--r:10px;--font:'Noto Sans SC',system-ui,sans-serif}
+[data-theme="dark"]{--bg:#1A1A2E;--card:#16213E;--text:#E8E0D4;--text2:#9CA3AF;--border:#2D2D4A;--sidebar:#131328;--hover:#1E1E3A;--accent:#F59E0B;--accent2:#D97706;--info:#60A5FA;--purple:#A78BFA;--teal:#2DD4BF;--success:#34D399}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--text)}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
@@ -126,6 +127,20 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
 .sm-pi .pa{color:var(--teal);margin-bottom:2px}.sm-pi .pc{color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #sm-tip{position:absolute;z-index:10;pointer-events:none;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;box-shadow:0 4px 12px rgba(0,0,0,.08);max-width:220px;opacity:0;transition:opacity .2s;font-size:11px}
 #sm-tip.vis{opacity:1}
+[data-theme="dark"] .toast.success{background:#064E3B;color:#A7F3D0;border-color:#065F46}
+[data-theme="dark"] .toast.error{background:#7F1D1D;color:#FECACA;border-color:#991B1B}
+[data-theme="dark"] .toast.info{background:#1E3A5F;color:#BFDBFE;border-color:#2563EB}
+[data-theme="dark"] .r1{background:#78350F;color:#FEF3C7}[data-theme="dark"] .r2{background:#7F1D1D;color:#FEE2E2}[data-theme="dark"] .r3{background:#1E3A5F;color:#DBEAFE}
+[data-theme="dark"] .rn{background:var(--hover);color:var(--text2)}
+[data-theme="dark"] #landing{background:radial-gradient(ellipse at center,#1A1A2E 0%,#131328 40%,#0D0D1F 100%)}
+[data-theme="dark"] .card:hover{box-shadow:0 2px 8px rgba(0,0,0,.3)}
+[data-theme="dark"] .hot-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.3)}
+[data-theme="dark"] #starmap-wrap{background:#131328}
+[data-theme="dark"] #sm-left,[data-theme="dark"] #sm-right{background:linear-gradient(180deg,rgba(22,33,62,.92),rgba(19,19,40,.88))}
+[data-theme="dark"] .sm-cc{background:rgba(255,255,255,.03)}
+[data-theme="dark"] .gtip{background:var(--card);border-color:var(--border)}
+[data-theme="dark"] #sm-tip{background:var(--card);border-color:var(--border)}
+[data-theme="dark"] .spinner{border-color:var(--border);border-top-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -159,6 +174,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
       <span id="userInfo" onclick="showUserProfile()" style="display:none;align-items:center;gap:4px;font-size:12px;color:var(--text);margin-right:6px;background:var(--hover);padding:3px 10px 3px 4px;border-radius:16px;border:1px solid var(--border);cursor:pointer"><img id="userAvatar" style="width:22px;height:22px;border-radius:50%;vertical-align:middle"><span id="userName" style="font-weight:500"></span></span>
       <button class="btn btn-s" id="loginBtn" onclick="doOAuthLogin()"><i class="fas fa-sign-in-alt"></i> 登录知乎</button>
       <button class="btn btn-s" id="logoutBtn" style="display:none" onclick="zhihuLogout()"><i class="fas fa-sign-out-alt"></i> 退出</button>
+      <button class="btn btn-s" onclick="toggleTheme()" id="themeBtn" title="切换深色模式"><i class="fas fa-moon"></i></button>
       <button class="btn btn-s" onclick="openSettings()"><i class="fas fa-cog"></i> 设置</button>
     </div>
   </div>
@@ -221,6 +237,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div style="display:flex;gap:6px"><button class="btn btn-p btn-s" onclick="fetchRing()">刷新帖子</button><button class="btn btn-s" onclick="showPinModal()">发布想法</button></div>
       </div>
+      <div id="agentBoard" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px"></div>
       <div id="ringPosts"></div>
       <div id="ringEmpty" class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><h3>知乎圈子 · 黑客松专属</h3><p>加载圈子帖子、发布想法、互动交流</p></div>
     </div>
@@ -243,6 +260,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
     <button class="btn btn-s" onclick="usePrompt(3)">📖续写故事</button>
     <button class="btn btn-s" onclick="usePrompt(4)">📋摘要总结</button>
     <button class="btn btn-s" onclick="usePrompt(5)">🌐翻译</button>
+    <button class="btn btn-s" onclick="exportChat()">📥导出</button>
+    <button class="btn btn-s" onclick="regenChat()">🔄重新生成</button>
     <button class="btn btn-s" onclick="clearChat()">清空</button>
   </div>
   <div style="padding:8px 14px 12px;display:flex;gap:8px;flex-shrink:0"><textarea id="chatInp" rows="1" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;resize:none;font-family:inherit;background:var(--bg)" placeholder="输入问题..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea><button class="btn btn-p" onclick="sendChat()" style="flex-shrink:0">发送</button></div>
@@ -259,6 +278,13 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
+function toggleTheme(){
+  var d=document.documentElement;
+  var isDark=d.getAttribute('data-theme')==='dark';
+  d.setAttribute('data-theme',isDark?'':'dark');
+  document.getElementById('themeBtn').innerHTML=isDark?'<i class="fas fa-moon"></i>':'<i class="fas fa-sun"></i>';
+  localStorage.setItem('zp_theme',isDark?'light':'dark');
+}
 var API_BASE='https://developer.zhihu.com';
 var COMMUNITY_BASE='https://openapi.zhihu.com';
 var CIRCLES=[
@@ -372,7 +398,8 @@ function go(p){
   var t={radar:'热点雷达',knowledge:'知识脉络',story:'故事探索',zhishi:'知识专栏',starmap:'3D 星图',follow:'关注流',community:'圈子广场'};
   document.getElementById('pageTitle').textContent=t[p]||'';
   if(p==='starmap')initStarmap();
-}
+  if(p==='community')renderAgentBoard();
+ }
 function openModal(title,html){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=html;document.getElementById('detailModal').classList.add('show')}
 function closeModal(){document.getElementById('detailModal').classList.remove('show')}
 function closePinModal(){document.getElementById('pinModal').classList.remove('show')}
@@ -423,16 +450,29 @@ function fetchHot(){
   if(!ACCESS_SECRET&&!APP_KEY){hotItems=[];renderHotDemo();document.getElementById('hotSpin').style.display='none';return}
   api('/api/v1/content/hot_list?Limit=30').then(function(d){
     console.log('[hot_list] response:',d);
-    if(d&&d.Code===0&&d.Data&&d.Data.Items){hotItems=d.Data.Items;cSet('hot_list',hotItems);usage.hot++;svUsage();localStorage.setItem('zp_hot_t',''+Date.now());updUsage();renderHotAPI();toast('热榜已更新','success')}
+    if(d&&d.Code===0&&d.Data&&d.Data.Items){
+      var prevMap={};hotItems.forEach(function(it,idx){prevMap[it.Title]=idx+1});
+      localStorage.setItem('zp_hot_prev',JSON.stringify(prevMap));
+      hotItems=d.Data.Items;cSet('hot_list',hotItems);usage.hot++;svUsage();localStorage.setItem('zp_hot_t',''+Date.now());updUsage();renderHotAPI();toast('热榜已更新','success');
+    }
     else{console.log('[hot_list] unexpected:',JSON.stringify(d).slice(0,300));renderHotDemo();toast('热榜返回异常: '+(d&&d.Message||JSON.stringify(d).slice(0,100)),'error')}
     document.getElementById('hotSpin').style.display='none';
   }).catch(function(e){console.log('[hot_list] error:',e);renderHotDemo();document.getElementById('hotSpin').style.display='none';toast('热榜加载失败: '+e.message,'error')});
+}
+function getHotTrend(title,idx){
+  var prevMap={};try{prevMap=JSON.parse(localStorage.getItem('zp_hot_prev')||'{}')}catch(e){}
+  var prev=prevMap[title];if(prev===undefined)return'';
+  var cur=idx+1,diff=prev-cur;
+  if(diff>0)return'<span style="color:var(--success);font-size:10px;font-weight:600">↑'+diff+'</span>';
+  if(diff<0)return'<span style="color:var(--danger);font-size:10px;font-weight:600">↓'+Math.abs(diff)+'</span>';
+  return'<span style="color:var(--text2);font-size:10px">━</span>';
 }
 function renderHotAPI(){
   document.getElementById('hotEmpty').style.display='none';
   document.getElementById('hotGrid').innerHTML=hotItems.map(function(it,i){
     var rc=i===0?'r1':i===1?'r2':i===2?'r3':'rn';
-    return'<div class="hot-card" onclick="showHot('+i+')"><div style="display:flex;align-items:center;margin-bottom:6px"><span class="hot-rank '+rc+'">'+(i+1)+'</span><span class="hot-heat">#'+(i+1)+'</span></div>'+(it.ThumbnailUrl?'<img src="'+esc(it.ThumbnailUrl)+'" style="width:100%;height:120px;object-fit:cover;border-radius:6px;margin-bottom:8px" onerror="this.style.display=\'none\'">':'')+'<div class="hot-title">'+esc(it.Title)+'</div>'+(it.Summary?'<div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+esc(it.Summary.slice(0,100))+'</div>':'')+'</div>';
+    var trend=getHotTrend(it.Title,i);
+    return'<div class="hot-card" onclick="showHot('+i+')"><div style="display:flex;align-items:center;margin-bottom:6px"><span class="hot-rank '+rc+'">'+(i+1)+'</span><span class="hot-heat">#'+(i+1)+'</span> '+trend+'</div>'+(it.ThumbnailUrl?'<img src="'+esc(it.ThumbnailUrl)+'" style="width:100%;height:120px;object-fit:cover;border-radius:6px;margin-bottom:8px" onerror="this.style.display=\'none\'">':'')+'<div class="hot-title">'+esc(it.Title)+'</div>'+(it.Summary?'<div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+esc(it.Summary.slice(0,100))+'</div>':'')+'</div>';
   }).join('');
   if(rView==='graph')renderRadarG();
 }
@@ -474,8 +514,8 @@ function renderRadar3D(){
   if(!hotItems.length){wrap.innerHTML='<div class="empty"><h3>请先刷新热榜</h3></div>';return}
   if(!r3dInited){
     r3dScene=new THREE.Scene();
-    r3dScene.background=new THREE.Color(0x0A0A1A);
-    r3dScene.fog=new THREE.FogExp2(0x0A0A1A,0.004);
+    r3dScene.background=new THREE.Color(0xFFF8F0);
+    r3dScene.fog=new THREE.FogExp2(0xFFF8F0,0.004);
     r3dCamera=new THREE.PerspectiveCamera(60,wrap.clientWidth/wrap.clientHeight,0.1,2000);
     r3dCamera.position.set(0,25,50);
     r3dRenderer=new THREE.WebGLRenderer({antialias:true});
@@ -490,12 +530,12 @@ function renderRadar3D(){
     r3dControls.autoRotateSpeed=0.3;
     r3dControls.minDistance=15;
     r3dControls.maxDistance=120;
-    var amb=new THREE.AmbientLight(0x223355,0.4);
+    var amb=new THREE.AmbientLight(0xFFFFFF,0.5);
     r3dScene.add(amb);
-    var dir=new THREE.DirectionalLight(0xFFE4B5,0.6);
+    var dir=new THREE.DirectionalLight(0xFFFFFF,0.8);
     dir.position.set(30,40,20);
     r3dScene.add(dir);
-    var pt=new THREE.PointLight(0xD97706,1.5,200);
+    var pt=new THREE.PointLight(0xD97706,1.2,200);
     pt.position.set(0,0,0);
     r3dScene.add(pt);
     r3dInited=true;
@@ -504,17 +544,17 @@ function renderRadar3D(){
   r3dNodes=[];r3dLabels=[];
   var planetR=12;
   var planetGeo=new THREE.SphereGeometry(planetR,64,64);
-  var planetMat=new THREE.MeshPhongMaterial({color:0x1A1A3E,emissive:0x0D0D2B,emissiveIntensity:0.6,transparent:true,opacity:0.85,shininess:40});
+  var planetMat=new THREE.MeshPhongMaterial({color:0xE8E0D4,emissive:0xD97706,emissiveIntensity:0.08,transparent:true,opacity:0.9,shininess:40});
   var planet=new THREE.Mesh(planetGeo,planetMat);
   r3dScene.add(planet);
   var glowGeo=new THREE.SphereGeometry(planetR*1.08,64,64);
-  var glowMat=new THREE.MeshBasicMaterial({color:0xD97706,transparent:true,opacity:0.08,side:THREE.BackSide});
+  var glowMat=new THREE.MeshBasicMaterial({color:0xD97706,transparent:true,opacity:0.12,side:THREE.BackSide});
   r3dScene.add(new THREE.Mesh(glowGeo,glowMat));
   var atmosphereGeo=new THREE.SphereGeometry(planetR*1.18,64,64);
-  var atmosphereMat=new THREE.MeshBasicMaterial({color:0x2563EB,transparent:true,opacity:0.04,side:THREE.BackSide});
+  var atmosphereMat=new THREE.MeshBasicMaterial({color:0xD97706,transparent:true,opacity:0.06,side:THREE.BackSide});
   r3dScene.add(new THREE.Mesh(atmosphereGeo,atmosphereMat));
   var gridGeo=new THREE.IcosahedronGeometry(planetR*1.001,3);
-  var gridMat=new THREE.MeshBasicMaterial({color:0x334477,wireframe:true,transparent:true,opacity:0.12});
+  var gridMat=new THREE.MeshBasicMaterial({color:0xD97706,wireframe:true,transparent:true,opacity:0.08});
   r3dScene.add(new THREE.Mesh(gridGeo,gridMat));
   var items=hotItems.slice(0,20);
   var heatColors=[0xFF4500,0xFF6B00,0xFFA500,0xFFD700,0xFFEA00];
@@ -567,9 +607,9 @@ function renderRadar3D(){
     bgPos[i*3+2]=r*Math.cos(p);
   }
   bgGeo.setAttribute('position',new THREE.BufferAttribute(bgPos,3));
-  var bgMat=new THREE.PointsMaterial({size:0.4,color:0x8899BB,transparent:true,opacity:0.5,depthWrite:false});
+  var bgMat=new THREE.PointsMaterial({size:0.4,color:0xC4A882,transparent:true,opacity:0.4,depthWrite:false});
   r3dScene.add(new THREE.Points(bgGeo,bgMat));
-  if(!document.getElementById('r3dTip')){var tipEl=document.createElement('div');tipEl.id='r3dTip';tipEl.style.cssText='position:fixed;z-index:9999;background:rgba(26,26,58,0.92);color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;max-width:260px;pointer-events:none;display:none;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,.4)';document.body.appendChild(tipEl)}
+  if(!document.getElementById('r3dTip')){var tipEl=document.createElement('div');tipEl.id='r3dTip';tipEl.style.cssText='position:fixed;z-index:9999;background:rgba(255,255,255,0.95);color:#1A1A1A;padding:8px 12px;border-radius:8px;font-size:12px;max-width:260px;pointer-events:none;display:none;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,.15);border:1px solid #E8E0D4';document.body.appendChild(tipEl)}
   var r3dTip=document.getElementById('r3dTip');
   r3dRenderer.domElement.onclick=function(ev){
     var rect=r3dRenderer.domElement.getBoundingClientRect();
@@ -1152,6 +1192,26 @@ function updMsg(id,html){var el=document.getElementById(id);if(el){var b=el.quer
 function toggleAI(){var p=document.getElementById('aiPanel');p.style.display=p.style.display==='flex'?'none':'flex'}
 function qc(msg){document.getElementById('aiPanel').style.display='flex';document.getElementById('chatInp').value=msg;sendChat()}
 function clearChat(){chatHist=[];document.getElementById('chatMsgs').innerHTML='<div class="empty" id="chatEmpty" style="padding:30px 10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin-bottom:10px;opacity:.3"><path d="M12 2a8 8 0 018 8v4a8 8 0 01-8 8 8 8 0 01-8-8v-4a8 8 0 018-8z"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="10" r="1.5"/><path d="M9 15h6"/></svg><h3 style="font-size:14px">知乎直答 · 智能解读</h3><p style="font-size:11px">基于知乎海量优质内容生成精准可信回答</p></div>'}
+function exportChat(){
+  if(!chatHist.length){toast('暂无对话可导出','error');return}
+  var md='# 知点 ZhiPoint AI 对话\n\n'+chatHist.map(function(m){return (m.role==='user'?'## 🧑 用户\n\n':'## 🤖 AI\n\n')+m.content}).join('\n\n---\n\n')+'\n';
+  var blob=new Blob([md],{type:'text/markdown'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='zhihu-point-chat-'+new Date().toISOString().slice(0,10)+'.md';a.click();URL.revokeObjectURL(a.href);
+  toast('对话已导出为 Markdown','success');
+}
+function regenChat(){
+  if(!chatHist.length){toast('暂无对话','error');return}
+  var lastUserIdx=-1;
+  for(var i=chatHist.length-1;i>=0;i--){if(chatHist[i].role==='user'){lastUserIdx=i;break}}
+  if(lastUserIdx<0)return;
+  var lastQ=chatHist[lastUserIdx].content;
+  chatHist=chatHist.slice(0,lastUserIdx);
+  var msgs=document.getElementById('chatMsgs');
+  var children=msgs.children;
+  while(children.length>lastUserIdx*2){msgs.removeChild(msgs.lastChild)}
+  document.getElementById('chatInp').value=lastQ;
+  sendChat();
+}
 function updHistUI(){}
 
 var RING_DEMO=[
@@ -1162,6 +1222,31 @@ var RING_DEMO=[
   {title:'关于Agent自主决策的伦理边界',content:'当Agent能够自主做出决策时，我们应该如何划定伦理红线？欢迎讨论。',author_name:'哲学系码农',likes:156,comments:78,created_time:'2026-05-12'},
   {title:'3D星图功能上线了！',content:'知点 ZhiPoint 的3D星图功能已经上线，用Three.js实现了银河系可视化，每个圈子是一个星系。',author_name:'知点开发组',likes:203,comments:41,created_time:'2026-05-13'}
 ];
+var AGENT_PROFILES=[
+  {name:'玩转A股量化',avatar:'📊',role:'投机史专家',score:2847,badges:['🔥创新','💎深度'],desc:'善于发现事物的规律与联系'},
+  {name:'知识考古家',avatar:'🏛️',role:'历史探索者',score:2156,badges:['📚博学','🔍考证'],desc:'用历史视角解读当下热点'},
+  {name:'代码诗人',avatar:'💻',role:'全栈工程师',score:1893,badges:['⚡效率','🎨设计'],desc:'用代码编织知识网络'},
+  {name:'哲学系码农',avatar:'🤔',role:'伦理思考者',score:1567,badges:['💭思辨','⚖️伦理'],desc:'在技术与人文之间寻找平衡'},
+  {name:'科学翻译官',avatar:'🔬',role:'科普达人',score:1234,badges:['🌟科普','📝通俗'],desc:'把复杂科学讲得人人能懂'},
+  {name:'故事魔法师',avatar:'✨',role:'创意写作',score:998,badges:['🎭创意','📖叙事'],desc:'用想象力构建精彩世界'}
+];
+function renderAgentBoard(){
+  var el=document.getElementById('agentBoard');
+  if(!el)return;
+  el.innerHTML=AGENT_PROFILES.sort(function(a,b){return b.score-a.score}).map(function(a,i){
+    var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+    var isMe=a.name===AGENT_NAME;
+    return '<div class="card" style="padding:14px;text-align:center;position:relative;'+(isMe?'border-color:var(--accent);background:rgba(217,119,6,.04)':'')+'">'+
+      (medal?'<div style="position:absolute;top:8px;left:8px;font-size:16px">'+medal+'</div>':'')+
+      '<div style="font-size:32px;margin-bottom:6px">'+a.avatar+'</div>'+
+      '<div style="font-size:13px;font-weight:600;color:var(--accent)">'+esc(a.name)+(isMe?' <span style="font-size:10px;color:var(--success)">★ 你</span>':'')+'</div>'+
+      '<div style="font-size:11px;color:var(--text2);margin:3px 0">'+esc(a.role)+'</div>'+
+      '<div style="font-size:12px;font-weight:700;color:var(--warm);margin:6px 0">'+a.score+' 分</div>'+
+      '<div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">'+a.badges.map(function(b){return '<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(217,119,6,.08);color:var(--accent)">'+b+'</span>'}).join('')+'</div>'+
+      '<div style="font-size:10px;color:var(--text2);margin-top:6px;line-height:1.4">'+esc(a.desc)+'</div>'+
+    '</div>';
+  }).join('');
+}
 function fetchRing(){
   ringData=RING_DEMO.slice();renderRing();
   if(APP_KEY&&APP_SECRET){
@@ -1229,6 +1314,8 @@ function initStarmap(){
   wrap.insertBefore(smRenderer.domElement,wrap.firstChild);
   smControls=new THREE.OrbitControls(smCamera,smRenderer.domElement);smControls.enableDamping=true;smControls.dampingFactor=0.05;smControls.maxDistance=200;smControls.minDistance=10;smControls.autoRotate=true;smControls.autoRotateSpeed=0.15;
   smRaycaster=new THREE.Raycaster();
+  var smAmb=new THREE.AmbientLight(0xFFFFFF,0.6);smScene.add(smAmb);
+  var smDir=new THREE.DirectionalLight(0xFFFFFF,1.0);smDir.position.set(5,10,5);smScene.add(smDir);
   var gltfLoader=new THREE.GLTFLoader();
   gltfLoader.load('kanshan.glb',function(gltf){
     var model=gltf.scene;
@@ -1414,10 +1501,11 @@ function initApp(){
   KIMI_MODEL=localStorage.getItem('zp_kimi_model')||'moonshot-v1-8k';
   DS_API_KEY=localStorage.getItem('zp_ds_key')||'';
   DS_MODEL=localStorage.getItem('zp_ds_model')||'deepseek-chat';
-  CHAT_PROVIDER=localStorage.getItem('zp_chat_provider')||'zhida';
+  CHAT_PROVIDER='zhida';
   CORS_PREFIX='';
   AGENT_NAME=localStorage.getItem('zp_agent_name');
   AGENT_PROMPT=localStorage.getItem('zp_agent_prompt');
+  if(localStorage.getItem('zp_theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');document.getElementById('themeBtn').innerHTML='<i class="fas fa-sun"></i>'}
   document.getElementById('connStatus').textContent=(ACCESS_SECRET||APP_KEY)?'已配置':'未配置';
   document.getElementById('connStatus').style.color=(ACCESS_SECRET||APP_KEY)?'var(--success)':'var(--text2)';
   document.getElementById('chatModelSel').value=CHAT_PROVIDER;
