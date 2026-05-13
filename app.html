@@ -637,6 +637,78 @@ function oauthFetch(path){
   return fetch(url,{headers:{'Authorization':'Bearer '+OAUTH_TOKEN}}).then(function(r){return r.json()});
 }
 
+var MOCK_FOLLOWING=[
+  {fullname:'张佳玮',headline:'作家，代表作《绝大多数人死于心碎》',avatar_path:'https://pic1.zhimg.com/80/v2-f6e79f00e49e5da6b55a0a8ab64d6fd3_720w.jpg',url:'https://www.zhihu.com/people/zhang-jia-wei'},
+  {fullname:'马伯庸',headline:'作家，代表作《长安十二时辰》',avatar_path:'https://pic2.zhimg.com/80/v2-7b6e4de22df9e2a40d1b8a5e0cb06d5c_720w.jpg',url:'https://www.zhihu.com/people/ma-bo-yong'},
+  {fullname:'谢熊猫君',headline:'挖坑不甘心，填坑没力气',avatar_path:'https://pic3.zhimg.com/80/v2-50a5a524b9a04ab4e0ee4c2025e22cfd_720w.jpg',url:'https://www.zhihu.com/people/xie-xiong-mao-jun'},
+  {fullname:'Luo Patrick',headline:'钻研城市和城市化',avatar_path:'https://pic4.zhimg.com/80/v2-a5a0e1a0d30fc52e0b70c30146238a58_720w.jpg',url:'https://www.zhihu.com/people/luo-patrick'},
+  {fullname:'苏莉安',headline:'什么都懂一点的生活家',avatar_path:'https://pic1.zhimg.com/80/v2-c7d6e1f6c4e12e56a77e0d6e9e6a1ed4_720w.jpg',url:'https://www.zhihu.com/people/su-li-an'}
+];
+var MOCK_FOLLOWERS=[
+  {fullname:'知友小A',headline:'热爱知识的普通网友',avatar_path:'https://pic2.zhimg.com/80/v2-924668e8d5e10fd8b5e38c76c57ae3df_720w.jpg',url:''},
+  {fullname:'知友大B',headline:'关注科技前沿',avatar_path:'https://pic3.zhimg.com/80/v2-7d0c8e3e6c49e0e6d80a4db2e2c4e56a_720w.jpg',url:''},
+  {fullname:'知友C酱',headline:'美食旅行博主',avatar_path:'https://pic4.zhimg.com/80/v2-4e73e4a57e2bd64df6e1d0c3bf6d25c3_720w.jpg',url:''}
+];
+var MOCK_FEED=[
+  {target:{title:'2026年AI发展趋势预测',excerpt:'从大模型到具身智能，AI正在加速改变世界...',author:{name:'张佳玮'}},action_text:'赞了该回答'},
+  {target:{title:'如何评价最新发布的GPT-5？',excerpt:'作为从GPT-1一路跟过来的老用户...',author:{name:'马伯庸'}},action_text:'关注了该问题'},
+  {target:{title:'量子计算离我们还有多远？',excerpt:'从理论突破到工程实现，量子计算正处在关键拐点...',author:{name:'谢熊猫君'}},action_text:'发表了文章'}
+];
+
+function fetchFollowing(){
+  if(!OAUTH_TOKEN){toast('请先登录知乎','error');return}
+  document.getElementById('followEmpty').style.display='none';
+  oauthFetch('/user/followed').then(function(d){
+    var items=Array.isArray(d)?d:(d.data||[]);
+    if(items.length)renderFL(items,'关注的人');
+    else renderFL(MOCK_FOLLOWING,'关注的人（演示）');
+  }).catch(function(){
+    renderFL(MOCK_FOLLOWING,'关注的人（演示）');
+  });
+}
+function fetchFollowers(){
+  if(!OAUTH_TOKEN){toast('请先登录知乎','error');return}
+  document.getElementById('followEmpty').style.display='none';
+  oauthFetch('/user/followers').then(function(d){
+    var items=Array.isArray(d)?d:(d.data||[]);
+    if(items.length)renderFL(items,'我的粉丝');
+    else renderFL(MOCK_FOLLOWERS,'我的粉丝（演示）');
+  }).catch(function(){
+    renderFL(MOCK_FOLLOWERS,'我的粉丝（演示）');
+  });
+}
+function fetchFeed(){
+  if(!OAUTH_TOKEN){toast('请先登录知乎','error');return}
+  document.getElementById('followEmpty').style.display='none';
+  oauthFetch('/user/moments').then(function(d){
+    var items=(d&&d.data)||[];
+    if(items.length)renderFeedList(items);
+    else renderFeedList(MOCK_FEED);
+  }).catch(function(){
+    renderFeedList(MOCK_FEED);
+  });
+}
+function renderFL(data,label){
+  document.getElementById('followList').innerHTML='<h3 style="font-size:14px;font-weight:600;margin-bottom:10px">'+esc(label)+' ('+data.length+')</h3>'+data.map(function(u){
+    var name=u.fullname||u.name||'用户';
+    var hl=u.headline||u.description||'';
+    var av=u.avatar_path||u.avatar_url||'';
+    return'<div class="card" style="display:flex;align-items:center;gap:12px;padding:12px">'+(av?'<img src="'+esc(av)+'" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0">':'<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--teal));display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:700;flex-shrink:0">'+esc(name[0])+'</div>')+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">'+esc(name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(hl.slice(0,60))+'</div></div></div>';
+  }).join('');
+  document.getElementById('feedList').innerHTML='';
+}
+function renderFeedList(data){
+  document.getElementById('followList').innerHTML='';
+  document.getElementById('feedList').innerHTML='<h3 style="font-size:14px;font-weight:600;margin-bottom:10px">关注动态 ('+data.length+')</h3>'+data.map(function(f){
+    var t=f.target||{};
+    var title=t.title||'';
+    var excerpt=t.excerpt||t.content||'';
+    var author=(t.author&&t.author.name)||'';
+    var action=f.action_text||'';
+    return'<div class="card"><div style="font-weight:600;font-size:13px;margin-bottom:4px">'+esc(title)+' <span style="font-size:12px;color:var(--text2);font-weight:400">· '+esc(author)+(action?' · '+esc(action):'')+'</span></div><p style="font-size:13px;color:var(--text2);line-height:1.6">'+esc(excerpt.slice(0,150))+'</p></div>';
+  }).join('');
+}
+
 
 function getContext(){
   var pg=document.querySelector('.page.active');
