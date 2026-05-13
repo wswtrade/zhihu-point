@@ -847,8 +847,9 @@ function doOAuthLogin(){
 }
 function exchangeCode(code){
   var redirectUri=window.location.origin+window.location.pathname;
+  var params='app_id='+encodeURIComponent(APP_ID)+'&app_key='+APP_KEY+'&app_secret='+encodeURIComponent(APP_SECRET)+'&grant_type=authorization_code&redirect_uri='+encodeURIComponent(redirectUri)+'&code='+code;
   toast('正在交换Token...','info');
-  fetch('https://openapi.zhihu.com/access_token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'app_id='+encodeURIComponent(APP_ID)+'&app_key='+APP_KEY+'&grant_type=authorization_code&redirect_uri='+encodeURIComponent(redirectUri)+'&code='+code}).then(function(r){
+  fetch('https://openapi.zhihu.com/access_token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params}).then(function(r){
     if(!r.ok)throw new Error('HTTP '+r.status);
     return r.json();
   }).then(function(d){
@@ -886,14 +887,10 @@ function fetchUserInfo(){
 
 function initApp(){
   if(!localStorage.getItem('zp_secret'))localStorage.setItem('zp_secret','a7H63P4osCI0ydhXg99M5xeyAdSZkYQs');
-  if(!localStorage.getItem('zp_appkey'))localStorage.setItem('zp_appkey','yqur9i');
-  if(!localStorage.getItem('zp_appsecret'))localStorage.setItem('zp_appsecret','a7H63P4osCI0ydhXg99M5xeyAdSZkYQs');
   if(!localStorage.getItem('zp_model'))localStorage.setItem('zp_model','zhida-thinking-1p5');
   if(!localStorage.getItem('zp_agent_name'))localStorage.setItem('zp_agent_name','玩转A股量化');
   if(!localStorage.getItem('zp_agent_prompt'))localStorage.setItem('zp_agent_prompt','投机史专家，善于发现事物的规律与联系。');
   ACCESS_SECRET=localStorage.getItem('zp_secret')||'';
-  APP_KEY=localStorage.getItem('zp_appkey');
-  APP_SECRET=localStorage.getItem('zp_appsecret');
   AI_MODEL=localStorage.getItem('zp_model');
   CORS_PREFIX='';
   AGENT_NAME=localStorage.getItem('zp_agent_name');
