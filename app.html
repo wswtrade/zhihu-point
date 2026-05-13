@@ -1074,48 +1074,49 @@ function sendZhidaChat(tid,msg){
     if(!resp.body){throw new Error('响应流不可用，请检查网络或CORS设置')}
     var reader=resp.body.getReader();
     var decoder=new TextDecoder();
-    var reasonBuf='',contentBuf='',done=false,partial='';
+    var reasonBuf='',contentBuf='',done=false,finalized=false,partial='';
+    function finalize(){
+      if(finalized)return;finalized=true;
+      if(contentBuf){chatHist.push({role:'assistant',content:contentBuf});usage.ai++;svUsage()}
+      else if(!reasonBuf){updMsg(tid,'AI 返回内容为空，请检查模型或 Access Secret');chatHist.pop()}
+      updHistUI();
+    }
     function pump(){
       return reader.read().then(function(result){
-        if(result.done||done){
-          if(contentBuf){chatHist.push({role:'assistant',content:contentBuf});usage.ai++;svUsage();updHistUI()}
-          else if(!contentBuf&&!reasonBuf){updMsg(tid,'API 返回为空，请检查 Access Secret 或模型设置');chatHist.pop()}
-          return;
-        }
+        if(result.done){finalize();return}
         var chunk=decoder.decode(result.value,{stream:true});
         partial+=chunk;
         var lines=partial.split('\n');
         partial=lines.pop();
         lines.forEach(function(line){
-          if(line.startsWith('data: ')){
-            var data=line.slice(6).trim();
-            if(data==='[DONE]'){done=true;return}
-            try{
-              var j=JSON.parse(data);
-              var delta=j.choices&&j.choices[0]&&j.choices[0].delta;
+          if(!line||line.startsWith(':'))return;
+          if(!line.startsWith('data: '))return;
+          var data=line.slice(6).trim();
+          if(!data||data==='[DONE]'){done=true;return}
+          try{
+            var j=JSON.parse(data);
+            var choice=j.choices&&j.choices[0];
+            if(choice){
+              var delta=choice.delta;
               if(delta){
                 if(delta.reasoning_content)reasonBuf+=delta.reasoning_content;
                 if(delta.content)contentBuf+=delta.content;
               }
-              var err=j.error;
-              if(err){done=true;contentBuf+='\n\n> 错误: '+err.message;return}
-            }catch(e){}
-          }
+              if(choice.finish_reason==='error'){done=true;var e=j.error;contentBuf+='\n\n> 服务端错误: '+(e?e.message:'未知');return}
+            }
+            if(j.error){done=true;contentBuf+='\n\n> API 错误: '+j.error.message;return}
+          }catch(e){}
         });
         var html='';
         if(reasonBuf&&!contentBuf)html='<details open style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reasonBuf)+'</div></details><div style="margin-top:4px"><span class="spinner"></span> 生成中...</div>';
         else if(contentBuf){
-          html='<details style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程（'+reasonBuf.length+'字）</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reasonBuf)+'</div></details>';
+          if(reasonBuf)html='<details style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程（'+reasonBuf.length+'字）</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reasonBuf)+'</div></details>';
           var md=contentBuf;try{md=typeof marked!=='undefined'?marked.parse(contentBuf):contentBuf}catch(e){}
           html+=md;
         }
         if(html)updMsg(tid,html);
-        if(!done)return pump();
-        else{
-          if(contentBuf){chatHist.push({role:'assistant',content:contentBuf});usage.ai++;svUsage()}
-          else{updMsg(tid,'AI 返回内容为空');chatHist.pop()}
-          updHistUI();
-        }
+        if(done)finalize();
+        else return pump();
       });
     }
     return pump();
