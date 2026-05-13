@@ -902,6 +902,10 @@ function initApp(){
   else renderHotDemo();
 }
 initLanding();
+if(window.opener&&window.location.search&&window.location.search.indexOf('code=')!==-1){
+  var m=window.location.search.match(/code=([^&#]+)/);
+  if(m&&m[1]){try{window.opener.exchangeCode(m[1])}catch(e){}window.close()}
+}
 window.addEventListener('resize',function(){if(lCanvas){lCanvas.width=window.innerWidth;lCanvas.height=window.innerHeight}onSmResize()});
 </script>
 </body>
