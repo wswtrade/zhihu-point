@@ -177,7 +177,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
       <div class="sbox"><input type="text" class="sinp" id="kgQ" placeholder="输入关键词，构建知识脉络..." onkeydown="if(event.key==='Enter')buildKG()"><button class="btn btn-p" onclick="buildKG()"><span id="kgSpin" class="spinner" style="display:none"></span> 构建脉络</button></div>
       <div id="kgTabs" class="tabs" style="display:none"><div class="tab active" data-kt="graph" onclick="switchKT('graph')">关联图谱</div><div class="tab" data-kt="list" onclick="switchKT('list')">搜索结果</div><div class="tab" data-kt="3d" onclick="switchKT('3d')">3D脉络</div></div>
       <div id="kgGraph" class="gbox"><svg id="kgSvg"></svg><div id="kgTip" class="gtip"></div><div class="gctrl"><button class="btn btn-s" onclick="zK('in')">+</button><button class="btn btn-s" onclick="zK('out')">-</button><button class="btn btn-s" onclick="zK('reset')">1:1</button></div></div>
-      <div id="kg3dWrap" class="gbox" style="display:none"></div>
+      <div id="kg3dWrap" class="gbox" style="display:none"><div id="kg3dTip" class="gtip"></div></div>
       <div id="kgList" style="display:none"></div>
       <div id="kgEmpty" class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="8" y1="8" x2="10.5" y2="15"/><line x1="16" y1="8" x2="13.5" y2="15"/></svg><h3>输入关键词探索知识脉络</h3><p>同时搜索知乎站内和全网，自动构建关联图谱</p></div>
     </div>
@@ -231,14 +231,17 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
 
 <div id="aiPanel" style="position:fixed;right:24px;bottom:92px;width:400px;height:520px;background:var(--card);border:1px solid var(--border);border-radius:14px;z-index:100;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.12);overflow:hidden">
   <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
-    <div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">AI</div><span style="font-size:14px;font-weight:600">知乎直答</span><span style="font-size:11px;color:var(--text2)">100次/天</span></div>
+    <div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">AI</div><select id="chatModelSel" onchange="switchChatModel()" style="font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;padding:2px 8px;background:var(--bg);outline:none;font-family:inherit;cursor:pointer"><option value="zhida">AI直答</option><option value="kimi">Kimi</option></select><span id="chatQuota" style="font-size:11px;color:var(--text2)">100次/天</span></div>
     <button class="btn btn-s" onclick="toggleAI()">关闭</button>
   </div>
   <div id="chatMsgs" style="flex:1;overflow-y:auto;padding:14px"><div class="empty" id="chatEmpty" style="padding:30px 10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin-bottom:10px;opacity:.3"><path d="M12 2a8 8 0 018 8v4a8 8 0 01-8 8 8 8 0 01-8-8v-4a8 8 0 018-8z"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="10" r="1.5"/><path d="M9 15h6"/></svg><h3 style="font-size:14px">知乎直答 · 智能解读</h3><p style="font-size:11px">基于知乎海量优质内容生成精准可信回答</p></div></div>
   <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">
-    <button class="btn btn-s" onclick="qc('今天知乎热榜有什么值得关注的话题？')">热点概览</button>
-    <button class="btn btn-s" onclick="qc('帮我分析最近的科技趋势')">科技趋势</button>
-    <button class="btn btn-s" onclick="qc('有哪些值得关注的社会事件？')">社会事件</button>
+    <button class="btn btn-s" onclick="usePrompt(0)">📝写文章</button>
+    <button class="btn btn-s" onclick="usePrompt(1)">💬热点评论</button>
+    <button class="btn btn-s" onclick="usePrompt(2)">🔬知识科普</button>
+    <button class="btn btn-s" onclick="usePrompt(3)">📖续写故事</button>
+    <button class="btn btn-s" onclick="usePrompt(4)">📋摘要总结</button>
+    <button class="btn btn-s" onclick="usePrompt(5)">🌐翻译</button>
     <button class="btn btn-s" onclick="clearChat()">清空</button>
   </div>
   <div style="padding:8px 14px 12px;display:flex;gap:8px;flex-shrink:0"><textarea id="chatInp" rows="1" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;resize:none;font-family:inherit;background:var(--bg)" placeholder="输入问题..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea><button class="btn btn-p" onclick="sendChat()" style="flex-shrink:0">发送</button></div>
@@ -247,7 +250,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
 <div id="detailModal" class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:14px"><h3 id="modalTitle" style="flex:1;margin-right:10px"></h3><button class="btn btn-s" onclick="closeModal()">关闭</button></div><div id="modalBody"></div></div></div>
 <div id="profileModal" class="modal-bg" onclick="if(event.target===this)closeProfile()"><div class="modal" style="width:360px;text-align:center"><div style="display:flex;justify-content:flex-end;margin-bottom:4px"><button class="btn btn-s" onclick="closeProfile()">关闭</button></div><img id="profileAvatar" style="width:80px;height:80px;border-radius:50%;margin:0 auto 12px;display:block;border:3px solid var(--accent)"><h3 id="profileName" style="font-size:16px;margin-bottom:4px"></h3><p id="profileHeadline" style="font-size:13px;color:var(--text2);margin-bottom:12px"></p><div id="profileStats" style="display:flex;justify-content:center;gap:24px;margin-bottom:16px"><div><div style="font-size:18px;font-weight:700;color:var(--accent)" id="profileFollowing">-</div><div style="font-size:11px;color:var(--text2)">关注</div></div><div><div style="font-size:18px;font-weight:700;color:var(--accent)" id="profileFollowers">-</div><div style="font-size:11px;color:var(--text2)">粉丝</div></div></div><button class="btn btn-p" style="width:100%" onclick="closeProfile();go('follow');fetchFollowing()">查看关注列表</button></div></div>
 <div id="pinModal" class="modal-bg" onclick="if(event.target===this)closePinModal()"><div class="modal"><h3>发布想法</h3><textarea id="pinContent" placeholder="分享你的想法..." style="min-height:100px"></textarea><div id="pinCircleSelect" style="margin-top:10px;display:flex;gap:6px"></div><div style="margin-top:10px;display:flex;justify-content:flex-end;gap:6px"><button class="btn btn-s" onclick="closePinModal()">取消</button><button class="btn btn-p btn-s" onclick="publishPin()">发布</button></div></div></div>
-<div id="settingsModal" class="modal-bg" onclick="if(event.target===this)closeSettings()"><div class="modal" style="width:480px"><h3>API 设置</h3><div style="font-size:12px;color:var(--accent);margin-bottom:12px;padding:8px;background:rgba(217,119,6,.06);border-radius:6px">开放平台 API（热榜/搜索/AI直答）</div><div class="s-field"><label>Access Secret（从 developer.zhihu.com 获取）</label><input type="text" id="sSecret" placeholder="输入你的 Access Secret"></div><div style="font-size:12px;color:var(--info);margin-bottom:12px;padding:8px;background:rgba(37,99,235,.06);border-radius:6px">社区 API（圈子/帖子/评论/发布）</div><div class="s-field"><label>App Key（用户 Token）</label><input type="text" id="sAppKey" placeholder="people/ 后面的内容"></div><div class="s-field"><label>App Secret（应用密钥）</label><input type="text" id="sAppSecret" placeholder="从 zhihu.com/ring/moltbook 获取"></div><div class="s-field"><label>AI 模型</label><select id="sModel" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:inherit;background:var(--bg)"><option value="zhida-thinking-1p5">深度思考</option><option value="zhida-fast-1p5">快速回答</option><option value="zhida-agent">智能思考</option></select></div><div class="s-field"><label>Agent 名称</label><input type="text" id="sAgentName" placeholder="给你的 Agent 起个名字"></div><div class="s-field"><label>Agent 人设 / System Prompt</label><textarea id="sAgentPrompt" style="min-height:60px" placeholder="描述你的 Agent 性格和行为风格..."></textarea></div><div style="display:flex;justify-content:flex-end;gap:6px;margin-top:16px"><button class="btn btn-s" onclick="closeSettings()">取消</button><button class="btn btn-p btn-s" onclick="saveSettings()">保存</button></div></div></div>
+<div id="settingsModal" class="modal-bg" onclick="if(event.target===this)closeSettings()"><div class="modal" style="width:480px"><h3>API 设置</h3><div style="font-size:12px;color:var(--accent);margin-bottom:12px;padding:8px;background:rgba(217,119,6,.06);border-radius:6px">开放平台 API（热榜/搜索/AI直答）</div><div class="s-field"><label>Access Secret（从 developer.zhihu.com 获取）</label><input type="text" id="sSecret" placeholder="输入你的 Access Secret"></div><div class="s-field"><label>AI 模型</label><select id="sModel" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:inherit;background:var(--bg)"><option value="zhida-thinking-1p5">深度思考</option><option value="zhida-fast-1p5">快速回答</option><option value="zhida-agent">智能思考</option></select></div><div style="font-size:12px;color:#9333EA;margin-bottom:12px;padding:8px;background:rgba(147,51,234,.06);border-radius:6px">Kimi API（月光大模型）</div><div class="s-field"><label>Kimi API Key（从 platform.moonshot.cn 获取）</label><input type="text" id="sKimiKey" placeholder="sk-..."></div><div class="s-field"><label>Kimi 模型</label><select id="sKimiModel" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:inherit;background:var(--bg)"><option value="moonshot-v1-8k">moonshot-v1-8k</option><option value="moonshot-v1-32k">moonshot-v1-32k</option><option value="moonshot-v1-128k">moonshot-v1-128k</option></select></div><div style="font-size:12px;color:var(--info);margin-bottom:12px;padding:8px;background:rgba(37,99,235,.06);border-radius:6px">社区 API（圈子/帖子/评论/发布）</div><div class="s-field"><label>App Key</label><input type="text" id="sAppKey" placeholder="yqur9i"></div><div class="s-field"><label>App Secret</label><input type="text" id="sAppSecret" placeholder="应用密钥"></div><div style="font-size:12px;color:var(--teal);margin-bottom:12px;padding:8px;background:rgba(13,148,136,.06);border-radius:6px">Agent 设置</div><div class="s-field"><label>Agent 名称</label><input type="text" id="sAgentName" placeholder="给你的 Agent 起个名字"></div><div class="s-field"><label>Agent 人设 / System Prompt</label><textarea id="sAgentPrompt" style="min-height:60px" placeholder="描述你的 Agent 性格和行为风格..."></textarea></div><div style="display:flex;justify-content:flex-end;gap:6px;margin-top:16px"><button class="btn btn-s" onclick="closeSettings()">取消</button><button class="btn btn-p btn-s" onclick="saveSettings()">保存</button></div></div></div>
 
 <button class="btn btn-p" style="width:100%;padding:12px;font-size:14px" onclick="doOAuthLogin()">🔑 知乎社区登录</button>
 
@@ -266,6 +269,8 @@ var CIRCLE_ID='2029619126742656657';
 var ACCESS_SECRET='a7H63P4osCI0ydhXg99M5xeyAdSZkYQs',AI_MODEL='zhida-thinking-1p5',CORS_PREFIX='';
 var APP_KEY='yqur9i',APP_SECRET='a7H63P4osCI0ydhXg99M5xeyAdSZkYQs';
 var OAUTH_APP_ID='296',OAUTH_APP_KEY='4a1933db473d4829a256cf772aa62202',OAUTH_APP_SECRET='a7H63P4osCI0ydhXg99M5xeyAdSZkYQs';
+var KIMI_API_KEY='',KIMI_MODEL='moonshot-v1-8k',KIMI_BASE='https://api.moonshot.cn/v1';
+var CHAT_PROVIDER='zhida';
 var COMMUNITY_BASE='https://openapi.zhihu.com';
 var AGENT_NAME='玩转A股量化',AGENT_PROMPT='投机史专家，善于发现事物的规律与联系。';
 var usage={hot:0,search:0,ai:0,date:''};
@@ -375,13 +380,15 @@ function showPinModal(pf){
   CIRCLES.forEach(function(c,i){var b=document.createElement('button');b.className='btn btn-s'+(i===0?' btn-p':'');b.textContent=c.name;b.dataset.id=c.id;b.onclick=function(){sel.querySelectorAll('.btn').forEach(function(x){x.classList.remove('btn-p');x.classList.add('btn-s')});b.classList.add('btn-p');b.classList.remove('btn-s')};sel.appendChild(b)});
   document.getElementById('pinModal').classList.add('show');
 }
-function openSettings(){document.getElementById('sSecret').value=ACCESS_SECRET;document.getElementById('sAppKey').value=APP_KEY;document.getElementById('sAppSecret').value=APP_SECRET;document.getElementById('sModel').value=AI_MODEL;document.getElementById('sAgentName').value=AGENT_NAME;document.getElementById('sAgentPrompt').value=AGENT_PROMPT;document.getElementById('settingsModal').classList.add('show')}
+function openSettings(){document.getElementById('sSecret').value=ACCESS_SECRET;document.getElementById('sAppKey').value=APP_KEY;document.getElementById('sAppSecret').value=APP_SECRET;document.getElementById('sModel').value=AI_MODEL;document.getElementById('sKimiKey').value=KIMI_API_KEY;document.getElementById('sKimiModel').value=KIMI_MODEL;document.getElementById('sAgentName').value=AGENT_NAME;document.getElementById('sAgentPrompt').value=AGENT_PROMPT;document.getElementById('settingsModal').classList.add('show')}
 function closeSettings(){document.getElementById('settingsModal').classList.remove('show')}
 function saveSettings(){
   ACCESS_SECRET=document.getElementById('sSecret').value.trim();
   APP_KEY=document.getElementById('sAppKey').value.trim();
   APP_SECRET=document.getElementById('sAppSecret').value.trim();
   AI_MODEL=document.getElementById('sModel').value;
+  KIMI_API_KEY=document.getElementById('sKimiKey').value.trim();
+  KIMI_MODEL=document.getElementById('sKimiModel').value;
   CORS_PREFIX='';
   AGENT_NAME=document.getElementById('sAgentName').value.trim();
   AGENT_PROMPT=document.getElementById('sAgentPrompt').value.trim();
@@ -389,6 +396,8 @@ function saveSettings(){
   localStorage.setItem('zp_appkey',APP_KEY);
   localStorage.setItem('zp_appsecret',APP_SECRET);
   localStorage.setItem('zp_model',AI_MODEL);
+  localStorage.setItem('zp_kimi_key',KIMI_API_KEY);
+  localStorage.setItem('zp_kimi_model',KIMI_MODEL);
   localStorage.setItem('zp_agent_name',AGENT_NAME);
   localStorage.setItem('zp_agent_prompt',AGENT_PROMPT);
   document.getElementById('connStatus').textContent=(ACCESS_SECRET||APP_KEY)?'已配置':'未配置';
@@ -597,9 +606,10 @@ function renderKGGraph(q){
   var sim=d3.forceSimulation(nodes).force('link',d3.forceLink(links).id(function(d){return d.id}).distance(80)).force('charge',d3.forceManyBody().strength(-160)).force('center',d3.forceCenter(w/2,h/2)).force('collision',d3.forceCollide().radius(function(d){return d.r+3}));
   g.append('g').selectAll('line').data(links).enter().append('line').attr('stroke','#E8E0D4').attr('stroke-opacity',.5);
   var node=g.append('g').selectAll('g').data(nodes).enter().append('g').call(d3.drag().on('start',function(e,d){if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y}).on('drag',function(e,d){d.fx=e.x;d.fy=e.y}).on('end',function(e,d){if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
-  node.append('circle').attr('r',function(d){return d.r}).attr('fill',function(d){return cs(d.type)}).attr('fill-opacity',.85).attr('stroke','#fff').attr('stroke-width',2)
-    .on('mouseover',function(ev,d){if(d.item){d3.select(this).attr('fill-opacity',1);var tt=document.getElementById('kgTip');tt.innerHTML='<b>'+esc(d.item.Title||'')+'</b>';tt.style.display='block';tt.style.left=(ev.offsetX+12)+'px';tt.style.top=(ev.offsetY-8)+'px'}})
-    .on('mouseout',function(){d3.select(this).attr('fill-opacity',.85);document.getElementById('kgTip').style.display='none'});
+  node.append('circle').attr('r',function(d){return d.r}).attr('fill',function(d){return cs(d.type)}).attr('fill-opacity',.85).attr('stroke','#fff').attr('stroke-width',2).style('cursor',function(d){return d.item?'pointer':'default'})
+    .on('mouseover',function(ev,d){if(d.item){d3.select(this).attr('fill-opacity',1).attr('stroke-width',3);var tt=document.getElementById('kgTip');var excerpt=(d.item.ContentText||d.item.Summary||'').slice(0,80);tt.innerHTML='<b>'+esc(d.item.Title||'')+'</b>'+(excerpt?'<p style="margin:4px 0 0;color:var(--text2);font-size:11px;line-height:1.4">'+esc(excerpt)+'…</p>':'')+'<span style="color:var(--accent);font-size:10px">点击打开 →</span>';tt.style.display='block';tt.style.left=Math.min(ev.offsetX+12,tt.parentElement.clientWidth-290)+'px';tt.style.top=(ev.offsetY-8)+'px'}})
+    .on('mouseout',function(){d3.select(this).attr('fill-opacity',.85).attr('stroke-width',2);document.getElementById('kgTip').style.display='none'})
+    .on('click',function(ev,d){if(d.item&&d.item.Url){ev.stopPropagation();window.open(d.item.Url,'_blank')}});
   node.append('text').attr('text-anchor','middle').attr('dy',function(d){return d.r+12}).attr('font-size',10).attr('fill','#6B6356').text(function(d){return d.label});
   sim.on('tick',function(){g.selectAll('line').attr('x1',function(d){return d.source.x}).attr('y1',function(d){return d.source.y}).attr('x2',function(d){return d.target.x}).attr('y2',function(d){return d.target.y});node.attr('transform',function(d){return'translate('+d.x+','+d.y+')'})});
 }
@@ -612,7 +622,7 @@ function renderKGList(){
   h+='</div>';el.innerHTML=h;
 }
 function switchKT(t){document.querySelectorAll('[data-kt]').forEach(function(e){e.classList.toggle('active',e.dataset.kt===t)});document.getElementById('kgGraph').style.display=t==='graph'?'block':'none';document.getElementById('kgList').style.display=t==='list'?'block':'none';document.getElementById('kg3dWrap').style.display=t==='3d'?'block':'none';if(t==='3d')renderKG3d()}
-var kg3dScene=null,kg3dCamera=null,kg3dRenderer=null,kg3dControls=null,kg3dInited=false,kg3dNodes=[];
+var kg3dScene=null,kg3dCamera=null,kg3dRenderer=null,kg3dControls=null,kg3dInited=false,kg3dNodes=[],kg3dClickable=[];
 function renderKG3d(){
   var wrap=document.getElementById('kg3dWrap');
   if(!kg3dInited){
@@ -627,9 +637,12 @@ function renderKG3d(){
     var sg=new THREE.BufferGeometry(),sn=1500,sp=new Float32Array(sn*3);
     for(var i=0;i<sn;i++){var r=60+Math.random()*120,t=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);sp[i*3]=r*Math.sin(ph)*Math.cos(t);sp[i*3+1]=r*Math.sin(ph)*Math.sin(t);sp[i*3+2]=r*Math.cos(ph)}
     sg.setAttribute('position',new THREE.BufferAttribute(sp,3));kg3dScene.add(new THREE.Points(sg,new THREE.PointsMaterial({size:0.8,color:0xD97706,transparent:true,opacity:0.3,depthWrite:false})));
+    kg3dRenderer.domElement.addEventListener('click',onKG3dClick);
+    kg3dRenderer.domElement.addEventListener('mousemove',onKG3dMove);
+    kg3dRenderer.domElement.style.cursor='grab';
     animateKG3d();
   }
-  kg3dNodes.forEach(function(n){kg3dScene.remove(n)});kg3dNodes=[];
+  kg3dNodes.forEach(function(n){kg3dScene.remove(n)});kg3dNodes=[];kg3dClickable=[];
   var q=document.getElementById('kgQ').value.trim()||'知识';
   var colors={center:0xD97706,zhihu:0x2563EB,global:0x16A34A};
   var allNodes=[{id:'c',label:q,type:'center'}];
@@ -647,8 +660,9 @@ function renderKG3d(){
     var size=n.type==='center'?2:1;
     var geo=n.type==='center'?new THREE.SphereGeometry(size,32,32):new THREE.IcosahedronGeometry(size,1);
     var mat=new THREE.MeshPhongMaterial({color:colors[n.type],shininess:60,transparent:true,opacity:0.9});
-    var mesh=new THREE.Mesh(geo,mat);mesh.position.set(x,y,z);mesh.userData={pulse:Math.random()*Math.PI*2};
+    var mesh=new THREE.Mesh(geo,mat);mesh.position.set(x,y,z);mesh.userData={pulse:Math.random()*Math.PI*2,nodeData:n};
     kg3dScene.add(mesh);kg3dNodes.push(mesh);
+    if(n.item)kg3dClickable.push(mesh);
     var c=document.createElement('canvas');c.width=256;c.height=48;
     var ct=c.getContext('2d');ct.fillStyle=n.type==='center'?'#D97706':'#6B6356';ct.font='bold '+(n.type==='center'?'18':'14')+'px sans-serif';ct.textAlign='center';ct.fillText(n.label||'',128,32);
     var tex=new THREE.CanvasTexture(c);var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex}));
@@ -660,6 +674,46 @@ function renderKG3d(){
       var line=new THREE.Line(lineGeo,lineMat);kg3dScene.add(line);kg3dNodes.push(line);
     }
   });
+}
+var kg3dRaycaster=new THREE.Raycaster(),kg3dMouse=new THREE.Vector2(),kg3dHovered=null;
+function onKG3dClick(ev){
+  var wrap=document.getElementById('kg3dWrap');
+  var rect=wrap.getBoundingClientRect();
+  kg3dMouse.x=((ev.clientX-rect.left)/rect.width)*2-1;
+  kg3dMouse.y=-((ev.clientY-rect.top)/rect.height)*2+1;
+  kg3dRaycaster.setFromCamera(kg3dMouse,kg3dCamera);
+  var hits=kg3dRaycaster.intersectObjects(kg3dClickable);
+  if(hits.length>0){
+    var nd=hits[0].object.userData.nodeData;
+    if(nd&&nd.item&&nd.item.Url){
+      window.open(nd.item.Url,'_blank');
+    }
+  }
+}
+function onKG3dMove(ev){
+  var wrap=document.getElementById('kg3dWrap');
+  var rect=wrap.getBoundingClientRect();
+  kg3dMouse.x=((ev.clientX-rect.left)/rect.width)*2-1;
+  kg3dMouse.y=-((ev.clientY-rect.top)/rect.height)*2+1;
+  kg3dRaycaster.setFromCamera(kg3dMouse,kg3dCamera);
+  var hits=kg3dRaycaster.intersectObjects(kg3dClickable);
+  var tt=document.getElementById('kg3dTip');
+  if(hits.length>0){
+    var obj=hits[0].object;
+    var nd=obj.userData.nodeData;
+    kg3dRenderer.domElement.style.cursor='pointer';
+    if(nd&&nd.item){
+      var excerpt=(nd.item.ContentText||nd.item.Summary||'').slice(0,80);
+      tt.innerHTML='<b>'+esc(nd.item.Title||'')+'</b>'+(excerpt?'<p style="margin:4px 0 0;color:var(--text2);font-size:11px;line-height:1.4">'+esc(excerpt)+'…</p>':'')+'<span style="color:var(--accent);font-size:10px">点击打开 →</span>';
+      tt.style.display='block';tt.style.left=Math.min(ev.clientX-rect.left+12,wrap.clientWidth-290)+'px';tt.style.top=(ev.clientY-rect.top-8)+'px';
+    }
+    if(kg3dHovered&&kg3dHovered!==obj){kg3dHovered.material.emissive.setHex(0x000000)}
+    obj.material.emissive.setHex(0x222222);kg3dHovered=obj;
+  }else{
+    kg3dRenderer.domElement.style.cursor='grab';
+    tt.style.display='none';
+    if(kg3dHovered){kg3dHovered.material.emissive.setHex(0x000000);kg3dHovered=null}
+  }
 }
 function animateKG3d(){
   if(!kg3dInited)return;requestAnimationFrame(animateKG3d);
@@ -886,26 +940,48 @@ function getContext(){
   return ctx;
 }
 
+function switchChatModel(){
+  CHAT_PROVIDER=document.getElementById('chatModelSel').value;
+  document.getElementById('chatQuota').textContent=CHAT_PROVIDER==='kimi'?'Kimi API':'100次/天';
+  localStorage.setItem('zp_chat_provider',CHAT_PROVIDER);
+}
+var PROMPT_TEMPLATES=[
+  {name:'写文章',prompt:'请根据以下主题写一篇高质量的长文章，要有标题、小标题、分段论述，语言流畅，论据充分。主题：'},
+  {name:'热点评论',prompt:'请对以下热点事件进行深度评论，要有观点、有论据、有深度分析：'},
+  {name:'知识科普',prompt:'请用通俗易懂的语言科普以下概念，要求有趣、有例子、有数据支撑：'},
+  {name:'续写故事',prompt:'请根据以下内容续写一个精彩的故事，保持人物性格一致，情节合理推进：'},
+  {name:'摘要总结',prompt:'请对以下内容进行精准摘要，提炼核心观点，不超过300字：'},
+  {name:'翻译',prompt:'请将以下内容翻译为地道的中文（如果已是中文则翻译为英文）：'}
+];
+function usePrompt(idx){
+  document.getElementById('aiPanel').style.display='flex';
+  var inp=document.getElementById('chatInp');
+  inp.value=inp.value?PROMPT_TEMPLATES[idx].prompt+inp.value:PROMPT_TEMPLATES[idx].prompt;
+  inp.focus();
+}
 function sendChat(){
   var inp=document.getElementById('chatInp');var msg=inp.value.trim();if(!msg)return;
   inp.value='';inp.style.height='auto';chatHist.push({role:'user',content:msg});addMsg('user',msg);document.getElementById('chatEmpty').style.display='none';
   var tid=addMsg('assistant','<span class="spinner"></span> 搜索中...');
-  if(usage.ai>=100){updMsg(tid,'今日AI配额已用完（100次/天）');return}
+  if(CHAT_PROVIDER==='kimi'){sendKimiChat(tid,msg);return}
+  chatSearchFallback(tid,msg);
+}
+function sendKimiChat(tid,msg){
+  if(!KIMI_API_KEY){updMsg(tid,'请先在设置中配置 Kimi API Key（从 platform.moonshot.cn 获取）');return}
   var msgs=chatHist.slice(-10).map(function(m){return{role:m.role,content:m.content}});
-  api('/v1/chat/completions',{method:'POST',body:{model:AI_MODEL,messages:msgs,stream:false,max_tokens:2048}}).then(function(d){
-    console.log('[chat] API response:',JSON.stringify(d).slice(0,300));
+  fetch(KIMI_BASE+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+KIMI_API_KEY},body:JSON.stringify({model:KIMI_MODEL,messages:msgs,stream:false,max_tokens:4096})}).then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(d){
     var reply=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content||'';
     if(reply){
-      chatHist.push({role:'assistant',content:reply});usage.ai++;svUsage();
+      chatHist.push({role:'assistant',content:reply});
       try{updMsg(tid,typeof marked!=='undefined'?marked.parse(reply):reply)}catch(e){updMsg(tid,reply)}
     }else{
-      console.log('[chat] empty reply, falling back to search');
-      chatSearchFallback(tid,msg);
+      updMsg(tid,'Kimi 返回了空内容，请重试');
     }
-    updHistUI();
   }).catch(function(e){
-    console.log('[chat] API error, falling back to search:',e.message);
-    chatSearchFallback(tid,msg);
+    updMsg(tid,'Kimi 调用失败: '+e.message);
   });
 }
 function chatSearchFallback(tid,q){
@@ -1115,6 +1191,8 @@ function applyToken(token){
   toast('登录成功','success');
   onLoginOk();
   fetchUserInfo();
+  var saved=localStorage.getItem('zp_oauth_user');
+  if(saved){try{var u=JSON.parse(saved);if(u.fullname||u.name){document.getElementById('userName').textContent=u.fullname||u.name;if(u.avatar_path||u.avatar_url)document.getElementById('userAvatar').src=u.avatar_path||u.avatar_url}}catch(e){}}
 }
 function applyMockToken(){
   OAUTH_TOKEN='mock_'+Date.now();
@@ -1179,11 +1257,16 @@ function initApp(){
   APP_KEY=localStorage.getItem('zp_appkey');
   APP_SECRET=localStorage.getItem('zp_appsecret');
   AI_MODEL=localStorage.getItem('zp_model');
+  KIMI_API_KEY=localStorage.getItem('zp_kimi_key')||'';
+  KIMI_MODEL=localStorage.getItem('zp_kimi_model')||'moonshot-v1-8k';
+  CHAT_PROVIDER=localStorage.getItem('zp_chat_provider')||'zhida';
   CORS_PREFIX='';
   AGENT_NAME=localStorage.getItem('zp_agent_name');
   AGENT_PROMPT=localStorage.getItem('zp_agent_prompt');
   document.getElementById('connStatus').textContent=(ACCESS_SECRET||APP_KEY)?'已配置':'未配置';
   document.getElementById('connStatus').style.color=(ACCESS_SECRET||APP_KEY)?'var(--success)':'var(--text2)';
+  document.getElementById('chatModelSel').value=CHAT_PROVIDER;
+  document.getElementById('chatQuota').textContent=CHAT_PROVIDER==='kimi'?'Kimi API':'100次/天';
   try{usage=JSON.parse(localStorage.getItem('zp_usage'))}catch(e){}if(!usage||!usage.date)usage={hot:0,search:0,ai:0,date:''};
   var params=new URLSearchParams(window.location.search);
   var code=params.get('code')||params.get('authorization_code');
