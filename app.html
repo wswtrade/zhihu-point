@@ -1026,18 +1026,16 @@ function initStarmap(){
     var box=new THREE.Box3().setFromObject(model);
     var size=box.getSize(new THREE.Vector3());
     var maxDim=Math.max(size.x,size.y,size.z);
-    var scale=25/maxDim;
+    var scale=40/maxDim;
     model.scale.set(scale,scale,scale);
-    model.position.set(0,-5,0);
-    var mat=new THREE.MeshPhongMaterial({color:0x0066FF,shininess:80,specular:0x444444});
-    model.traverse(function(child){if(child.isMesh){child.material=mat}});
+    model.position.set(0,-8,0);
+    model.traverse(function(child){if(child.isMesh){
+      child.material=new THREE.MeshLambertMaterial({color:0xFFFFFF});
+    }});
     model.userData={type:'kanshan'};
     smScene.add(model);
-    var glowMat=new THREE.MeshBasicMaterial({color:0x0088FF,transparent:true,opacity:0.12,side:THREE.BackSide});
-    var glow=new THREE.Mesh(new THREE.SphereGeometry(15,32,32),glowMat);
-    glow.position.set(0,2,0);
-    smScene.add(glow);
-    var light=new THREE.PointLight(0x0066FF,1.5,50);light.position.set(0,5,0);smScene.add(light);
+    var hl=new THREE.DirectionalLight(0x0066FF,0.5);hl.position.set(-3,5,-5);smScene.add(hl);
+    var bl=new THREE.DirectionalLight(0xFFFFFF,1.0);bl.position.set(5,10,5);smScene.add(bl);
   },undefined,function(err){console.log('[kanshan] load failed:',err)});
   createSmStars();createSmGalaxies();createSmNebula();createSmStreams();
   smRenderer.domElement.addEventListener('click',onSmClick);smRenderer.domElement.addEventListener('mousemove',onSmMove);
