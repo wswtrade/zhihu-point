@@ -276,7 +276,7 @@ var CIRCLES=[
 ];
 var CIRCLE_ID='2029619126742656657';
 var ACCESS_SECRET='a7H63P4osCI0ydhXg99M5xeyAdSZkYQs',AI_MODEL='zhida-thinking-1p5',CORS_PREFIX='';
-var APP_KEY='yqur9i',APP_SECRET='a7H63P4osCI0ydhXg99M5xeyAdSZkYQs';
+var APP_KEY='yqur9i',APP_SECRET='a7H63P4osCI0ydhXg99M5xeyAdSZkYQs',APP_ID='知点ZhiPoint';
 var COMMUNITY_BASE='https://openapi.zhihu.com';
 var AGENT_NAME='玩转A股量化',AGENT_PROMPT='投机史专家，善于发现事物的规律与联系。';
 var usage={hot:0,search:0,ai:0,date:''};
@@ -856,8 +856,15 @@ function showLoginModal(){document.getElementById('loginModal').classList.add('s
 function closeLoginModal(){document.getElementById('loginModal').classList.remove('show')}
 function doOAuthLogin(){
   var redirectUri='https://wswtrade.github.io/zhihu-point/';
-  var url='https://openapi.zhihu.com/authorize?app_id='+APP_KEY+'&response_type=code&redirect_uri='+encodeURIComponent(redirectUri);
+  var url='https://openapi.zhihu.com/authorize?app_id='+encodeURIComponent(APP_ID)+'&response_type=code&redirect_uri='+encodeURIComponent(redirectUri);
   window.open(url,'zhihu_login','width=600,height=650,left='+(screen.width/2-300)+',top='+(screen.height/2-325)+',scrollbars=yes');
+}
+function exchangeCode(code){
+  var redirectUri='https://wswtrade.github.io/zhihu-point/';
+  fetch('https://openapi.zhihu.com/access_token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'app_id='+encodeURIComponent(APP_ID)+'&app_key='+APP_KEY+'&grant_type=authorization_code&redirect_uri='+encodeURIComponent(redirectUri)+'&code='+code}).then(function(r){return r.json()}).then(function(d){
+    if(d.access_token){OAUTH_TOKEN=d.access_token;localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);onLoginOk()}
+    else{toast('获取Token失败: '+(d.data||JSON.stringify(d)),'error')}
+  }).catch(function(e){toast('Token交换失败: '+e.message,'error')});
 }
 
 
