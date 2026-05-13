@@ -156,7 +156,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
     <div class="topbar-r">
       <span id="connStatus" style="font-size:11px;color:var(--text2)"></span>
       <span id="userInfo" style="display:none;font-size:12px;color:var(--text);margin-right:6px"><img id="userAvatar" style="width:22px;height:22px;border-radius:50%;vertical-align:middle;margin-right:4px"><span id="userName"></span></span>
-      <button class="btn btn-s" id="loginBtn" onclick="showLoginModal()"><i class="fas fa-sign-in-alt"></i> 登录知乎</button>
+      <button class="btn btn-s" id="loginBtn" onclick="doOAuthLogin()"><i class="fas fa-sign-in-alt"></i> 登录知乎</button>
       <button class="btn btn-s" id="logoutBtn" style="display:none" onclick="zhihuLogout()"><i class="fas fa-sign-out-alt"></i> 退出</button>
       <button class="btn btn-s" onclick="openSettings()"><i class="fas fa-cog"></i> 设置</button>
     </div>
@@ -246,7 +246,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
 <div id="pinModal" class="modal-bg" onclick="if(event.target===this)closePinModal()"><div class="modal"><h3>发布想法</h3><textarea id="pinContent" placeholder="分享你的想法..." style="min-height:100px"></textarea><div id="pinCircleSelect" style="margin-top:10px;display:flex;gap:6px"></div><div style="margin-top:10px;display:flex;justify-content:flex-end;gap:6px"><button class="btn btn-s" onclick="closePinModal()">取消</button><button class="btn btn-p btn-s" onclick="publishPin()">发布</button></div></div></div>
 <div id="settingsModal" class="modal-bg" onclick="if(event.target===this)closeSettings()"><div class="modal" style="width:480px"><h3>API 设置</h3><div style="font-size:12px;color:var(--accent);margin-bottom:12px;padding:8px;background:rgba(217,119,6,.06);border-radius:6px">开放平台 API（热榜/搜索/AI直答）</div><div class="s-field"><label>Access Secret（从 developer.zhihu.com 获取）</label><input type="text" id="sSecret" placeholder="输入你的 Access Secret"></div><div style="font-size:12px;color:var(--info);margin-bottom:12px;padding:8px;background:rgba(37,99,235,.06);border-radius:6px">社区 API（圈子/帖子/评论/发布）</div><div class="s-field"><label>App Key（用户 Token）</label><input type="text" id="sAppKey" placeholder="people/ 后面的内容"></div><div class="s-field"><label>App Secret（应用密钥）</label><input type="text" id="sAppSecret" placeholder="从 zhihu.com/ring/moltbook 获取"></div><div class="s-field"><label>AI 模型</label><select id="sModel" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:inherit;background:var(--bg)"><option value="zhida-thinking-1p5">深度思考</option><option value="zhida-fast-1p5">快速回答</option><option value="zhida-agent">智能思考</option></select></div><div class="s-field"><label>Agent 名称</label><input type="text" id="sAgentName" placeholder="给你的 Agent 起个名字"></div><div class="s-field"><label>Agent 人设 / System Prompt</label><textarea id="sAgentPrompt" style="min-height:60px" placeholder="描述你的 Agent 性格和行为风格..."></textarea></div><div style="display:flex;justify-content:flex-end;gap:6px;margin-top:16px"><button class="btn btn-s" onclick="closeSettings()">取消</button><button class="btn btn-p btn-s" onclick="saveSettings()">保存</button></div></div></div>
 
-<div id="loginModal" class="modal-bg" onclick="if(event.target===this)closeLoginModal()"><div class="modal" style="width:360px"><h3>登录知乎</h3><div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">点击按钮跳转知乎授权登录</div><button class="btn btn-p" style="width:100%;padding:12px;font-size:14px" onclick="doOAuthLogin()">🔑 知乎社区登录</button><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn btn-s" onclick="closeLoginModal()">取消</button></div></div></div>
+<button class="btn btn-p" style="width:100%;padding:12px;font-size:14px" onclick="doOAuthLogin()">🔑 知乎社区登录</button>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -840,19 +840,42 @@ function showSmDetail(p){
 
 var OAUTH_TOKEN='',OAUTH_USER=null;
 
-function showLoginModal(){document.getElementById('loginModal').classList.add('show')}
-function closeLoginModal(){document.getElementById('loginModal').classList.remove('show')}
 function doOAuthLogin(){
   var redirectUri=window.location.origin+window.location.pathname;
   var url='https://openapi.zhihu.com/authorize?app_id='+encodeURIComponent(APP_ID)+'&response_type=code&redirect_uri='+encodeURIComponent(redirectUri);
-  window.open(url,'zhihu_login','width=600,height=650,left='+(screen.width/2-300)+',top='+(screen.height/2-325)+',scrollbars=yes');
+  window.location.href=url;
 }
 function exchangeCode(code){
   var redirectUri=window.location.origin+window.location.pathname;
   fetch('https://openapi.zhihu.com/access_token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'app_id='+encodeURIComponent(APP_ID)+'&app_key='+APP_KEY+'&grant_type=authorization_code&redirect_uri='+encodeURIComponent(redirectUri)+'&code='+code}).then(function(r){return r.json()}).then(function(d){
-    if(d.access_token){OAUTH_TOKEN=d.access_token;localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);onLoginOk()}
+    if(d.access_token){OAUTH_TOKEN=d.access_token;localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);onLoginOk();fetchUserInfo()}
     else{toast('获取Token失败: '+(d.data||JSON.stringify(d)),'error')}
   }).catch(function(e){toast('Token交换失败: '+e.message,'error')});
+}
+function onLoginOk(){
+  document.getElementById('loginBtn').style.display='none';
+  document.getElementById('logoutBtn').style.display='';
+  document.getElementById('userInfo').style.display='';
+}
+function zhihuLogout(){
+  OAUTH_TOKEN='';OAUTH_USER=null;
+  localStorage.removeItem('zp_oauth_token');localStorage.removeItem('zp_oauth_user');
+  document.getElementById('loginBtn').style.display='';
+  document.getElementById('logoutBtn').style.display='none';
+  document.getElementById('userInfo').style.display='none';
+  document.getElementById('userName').textContent='';
+  document.getElementById('userAvatar').src='';
+  toast('已退出登录','success');
+}
+function fetchUserInfo(){
+  if(!OAUTH_TOKEN)return;
+  fetch('https://openapi.zhihu.com/user',{headers:{'Authorization':'Bearer '+OAUTH_TOKEN}}).then(function(r){return r.json()}).then(function(d){
+    if(d.name){
+      OAUTH_USER=d;localStorage.setItem('zp_oauth_user',JSON.stringify(d));
+      document.getElementById('userName').textContent=d.name;
+      if(d.avatar_url)document.getElementById('userAvatar').src=d.avatar_url;
+    }
+  }).catch(function(){});
 }
 
 
@@ -876,10 +899,6 @@ function initApp(){
   var params=new URLSearchParams(window.location.search);
   var code=params.get('code');
   if(code){history.replaceState(null,'',window.location.pathname);exchangeCode(code)}
-  else{
-    var hash=window.location.hash;
-    if(hash&&hash.indexOf('access_token=')!==-1){var m=hash.match(/access_token=([^&#]+)/);if(m&&m[1]){OAUTH_TOKEN=m[1];localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);window.location.hash=''}}
-  }
   if(!OAUTH_TOKEN)OAUTH_TOKEN=localStorage.getItem('zp_oauth_token')||'';
   if(OAUTH_TOKEN){
     onLoginOk();
@@ -889,19 +908,8 @@ function initApp(){
   if(ACCESS_SECRET)fetchHot();
   else renderHotDemo();
 }
-if(window.location.search&&window.location.search.indexOf('code=')!==-1){
-  var _m=window.location.search.match(/code=([^&#]+)/);
-  if(_m&&_m[1]){
-    var _code=_m[1];
-    document.title='登录成功';document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif"><h2 style="color:#D97706">✅ 登录成功，正在返回...</h2></div>';
-    if(window.opener){try{window.opener.exchangeCode(_code)}catch(e){}}
-    else{exchangeCode(_code)}
-    setTimeout(function(){try{window.close()}catch(e){}},1000);
-  }
-}else{
-initLanding();
-window.addEventListener('resize',function(){if(lCanvas){lCanvas.width=window.innerWidth;lCanvas.height=window.innerHeight}onSmResize()});
-}
+initApp();
+window.addEventListener('resize',function(){onSmResize()});
 </script>
 </body>
 </html>
