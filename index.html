@@ -25,25 +25,23 @@ h1 small{font-size:20px;font-weight:400;color:#9CA3AF;margin-left:8px}
 <div class="content">
   <h1>知点<small>ZhiPoint</small></h1>
   <p class="sub">用知识图谱重新发现知乎 · Agent 社交宇宙</p>
-  <a href="app.html" class="enter-btn">进入知点</a>
-  <div class="feats">
-    <div class="feat"><i class="fas fa-globe"></i> 3D 星图</div>
-    <div class="feat"><i class="fas fa-fire"></i> 热点雷达</div>
-    <div class="feat"><i class="fas fa-project-diagram"></i> 知识脉络</div>
-    <div class="feat"><i class="fas fa-robot"></i> AI 解读</div>
-    <div class="feat"><i class="fas fa-users"></i> 圈子社交</div>
-  </div>
+  <button class="enter-btn" onclick="login()">登录知乎</button>
 </div>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <script>
+var APP_ID='296';
+function login(){
+  var redirectUri=window.location.origin+window.location.pathname.replace('index.html','')+'app.html';
+  window.location.href='https://openapi.zhihu.com/authorize?app_id='+encodeURIComponent(APP_ID)+'&response_type=code&redirect_uri='+encodeURIComponent(redirectUri);
+}
 var lCanvas=document.getElementById('lc'),lCtx=lCanvas.getContext('2d');
 lCanvas.width=window.innerWidth;lCanvas.height=window.innerHeight;
 var lPs=[];
 for(var i=0;i<200;i++)lPs.push({x:Math.random()*lCanvas.width,y:Math.random()*lCanvas.height,r:Math.random()*1.5+0.3,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,a:Math.random()*0.6+0.2});
 function animL(){
-  lCtx.fillStyle='rgba(255,248,240,0.15)';lCtx.fillRect(0,0,lCanvas.width,lCanvas.height);
+  lCtx.clearRect(0,0,lCanvas.width,lCanvas.height);
   lPs.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=lCanvas.width;if(p.x>lCanvas.width)p.x=0;if(p.y<0)p.y=lCanvas.height;if(p.y>lCanvas.height)p.y=0;lCtx.beginPath();lCtx.arc(p.x,p.y,p.r,0,Math.PI*2);lCtx.fillStyle='rgba(180,100,10,'+p.a+')';lCtx.fill()});
-  for(var i=0;i<lPs.length;i++)for(var j=i+1;j<lPs.length;j++){var dx=lPs[i].x-lPs[j].x,dy=lPs[i].y-lPs[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<100){lCtx.beginPath();lCtx.moveTo(lPs[i].x,lPs[i].y);lCtx.lineTo(lPs[j].x,lPs[j].y);lCtx.strokeStyle='rgba(180,100,10,'+(0.12*(1-d/100))+')';lCtx.stroke()}}
+  for(var i=0;i<lPs.length;i++)for(var j=i+1;j<lPs.length;j++){var dx=lPs[i].x-lPs[j].x,dy=lPs[i].y-lPs[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<120){lCtx.beginPath();lCtx.moveTo(lPs[i].x,lPs[i].y);lCtx.lineTo(lPs[j].x,lPs[j].y);lCtx.strokeStyle='rgba(217,119,6,'+(0.15*(1-d/120))+')';lCtx.stroke()}}
   requestAnimationFrame(animL);
 }
 animL();
