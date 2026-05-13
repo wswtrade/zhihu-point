@@ -847,10 +847,15 @@ function doOAuthLogin(){
 }
 function exchangeCode(code){
   var redirectUri=window.location.origin+window.location.pathname;
-  fetch('https://openapi.zhihu.com/access_token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'app_id='+encodeURIComponent(APP_ID)+'&app_key='+APP_KEY+'&grant_type=authorization_code&redirect_uri='+encodeURIComponent(redirectUri)+'&code='+code}).then(function(r){return r.json()}).then(function(d){
-    if(d.access_token){OAUTH_TOKEN=d.access_token;localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);onLoginOk();fetchUserInfo()}
-    else{toast('获取Token失败: '+(d.data||JSON.stringify(d)),'error')}
-  }).catch(function(e){toast('Token交换失败: '+e.message,'error')});
+  toast('正在交换Token...','info');
+  fetch('https://openapi.zhihu.com/access_token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'app_id='+encodeURIComponent(APP_ID)+'&app_key='+APP_KEY+'&grant_type=authorization_code&redirect_uri='+encodeURIComponent(redirectUri)+'&code='+code}).then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(d){
+    console.log('[exchangeCode] response:',d);
+    if(d.access_token){OAUTH_TOKEN=d.access_token;localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);toast('登录成功','success');onLoginOk();fetchUserInfo()}
+    else{toast('获取Token失败: '+(d.error||d.message||JSON.stringify(d)),'error')}
+  }).catch(function(e){console.log('[exchangeCode] error:',e);toast('Token交换失败: '+e.message,'error')});
 }
 function onLoginOk(){
   document.getElementById('loginBtn').style.display='none';
