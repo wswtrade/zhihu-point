@@ -43,7 +43,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
 .topbar h2{font-size:15px;font-weight:600}
 .topbar-r{display:flex;align-items:center;gap:8px}
 .content{flex:1;overflow-y:auto;padding:20px}
-.page{display:none}.page.active{display:block}
+.page{display:none;opacity:0;transition:opacity .25s}.page.active{display:block;opacity:1}
 .btn{padding:5px 14px;border-radius:7px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);transition:all .15s;font-family:inherit}
 .btn:hover{background:var(--hover);border-color:var(--accent)}
 .btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-p:hover{background:var(--accent2)}
@@ -182,19 +182,21 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
 
     <div id="page-radar" class="page active">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="display:flex;gap:6px"><button class="btn btn-p" onclick="fetchHot()"><span id="hotSpin" class="spinner" style="display:none"></span> 刷新热榜</button><button class="btn btn-p" onclick="setRView('list')" id="bL">列表</button><button class="btn" onclick="setRView('graph')" id="bG">2D图谱</button><button class="btn" onclick="setRView('3d')" id="b3D">3D图谱</button></div>
-        <span style="font-size:11px;color:var(--text2)">100次/天</span>
+        <div style="display:flex;gap:6px"><button class="btn btn-p" onclick="fetchHot()"><span id="hotSpin" class="spinner" style="display:none"></span> 刷新热榜</button><button class="btn btn-p" onclick="setRView('list')" id="bL">列表</button><button class="btn" onclick="setRView('graph')" id="bG">2D图谱</button><button class="btn" onclick="setRView('3d')" id="b3D">3D图谱</button><button class="btn" onclick="toggleTrend()" id="bTrend"><i class="fas fa-chart-line"></i> 趋势</button></div>
+        <div style="display:flex;gap:6px;align-items:center"><span style="font-size:11px;color:var(--text2)">100次/天</span><button class="btn btn-s" onclick="qc('请分析当前知乎热榜的趋势：哪些话题在上升、哪些在下降、有什么共性？给出深度洞察。')"><i class="fas fa-brain"></i> 一键分析</button></div>
       </div>
+      <div id="hotTrend" style="display:none;margin-bottom:12px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:13px;font-weight:600">热点趋势追踪</span><span style="font-size:11px;color:var(--text2)" id="trendTime">-</span></div><canvas id="trendCanvas" height="180" style="width:100%;border-radius:6px"></canvas><div id="trendLegend" style="display:flex;gap:12px;margin-top:8px;font-size:11px;flex-wrap:wrap"></div></div>
       <div id="radarGraph" class="gbox" style="display:none"><svg id="radarSvg"></svg><div id="radarTip" class="gtip"></div><div class="gctrl"><button class="btn btn-s" onclick="zR('in')">+</button><button class="btn btn-s" onclick="zR('out')">-</button><button class="btn btn-s" onclick="zR('reset')">1:1</button></div></div>
       <div id="radar3D" class="gbox" style="display:none"></div>
       <div id="radarList"><div id="hotGrid" class="hot-grid"></div><div id="hotEmpty" class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><h3>点击"刷新热榜"获取实时热点</h3><p>每次调用消耗1次配额（每日100次）</p></div></div>
     </div>
 
     <div id="page-knowledge" class="page">
-      <div class="sbox"><input type="text" class="sinp" id="kgQ" placeholder="输入关键词，构建知识脉络..." onkeydown="if(event.key==='Enter')buildKG()"><button class="btn btn-p" onclick="buildKG()"><span id="kgSpin" class="spinner" style="display:none"></span> 构建脉络</button></div>
-      <div id="kgTabs" class="tabs" style="display:none"><div class="tab active" data-kt="graph" onclick="switchKT('graph')">关联图谱</div><div class="tab" data-kt="list" onclick="switchKT('list')">搜索结果</div><div class="tab" data-kt="3d" onclick="switchKT('3d')">3D脉络</div></div>
+      <div class="sbox"><input type="text" class="sinp" id="kgQ" placeholder="输入关键词，构建知识脉络..." onkeydown="if(event.key==='Enter')buildKG()"><button class="btn btn-p" onclick="buildKG()"><span id="kgSpin" class="spinner" style="display:none"></span> 构建脉络</button><button class="btn" onclick="genKnowledgeReport()" title="一键生成知识报告"><i class="fas fa-file-alt"></i> 知识报告</button></div>
+      <div id="kgTabs" class="tabs" style="display:none"><div class="tab active" data-kt="graph" onclick="switchKT('graph')">关联图谱</div><div class="tab" data-kt="list" onclick="switchKT('list')">搜索结果</div><div class="tab" data-kt="3d" onclick="switchKT('3d')">3D脉络</div><div class="tab" data-kt="timeline" onclick="switchKT('timeline')">时间线</div></div>
       <div id="kgGraph" class="gbox"><svg id="kgSvg"></svg><div id="kgTip" class="gtip"></div><div class="gctrl"><button class="btn btn-s" onclick="zK('in')">+</button><button class="btn btn-s" onclick="zK('out')">-</button><button class="btn btn-s" onclick="zK('reset')">1:1</button></div></div>
       <div id="kg3dWrap" class="gbox" style="display:none"><div id="kg3dTip" class="gtip"></div></div>
+      <div id="kgTimeline" class="gbox" style="display:none;padding:20px;overflow-y:auto"><div id="tlContent"></div></div>
       <div id="kgList" style="display:none"></div>
       <div id="kgEmpty" class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="8" y1="8" x2="10.5" y2="15"/><line x1="16" y1="8" x2="13.5" y2="15"/></svg><h3>输入关键词探索知识脉络</h3><p>同时搜索知乎站内和全网，自动构建关联图谱</p></div>
     </div>
@@ -219,7 +221,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
           <div id="sm-left">
             <div class="sm-sec"><div class="sm-title">智能体圈子</div><div id="sm-circles"></div></div>
             <div class="sm-sec" style="padding-top:0"><div class="sm-title">帖子</div></div>
-            <div id="sm-posts" style="padding:0 12px 12px;overflow-y:auto;max-height:50vh"></div>
+            <div id="sm-posts" style="padding:0 12px 12px;overflow-y:auto;max-height:40vh"></div>
+            <div class="sm-sec" style="padding-top:0"><div class="sm-title">宇宙演化</div><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn btn-s" onclick="smTimeReplay()"><i class="fas fa-play"></i> 时间回放</button><button class="btn btn-s" onclick="smTimePause()"><i class="fas fa-pause"></i> 暂停</button><button class="btn btn-s" onclick="smTimeReset()"><i class="fas fa-undo"></i> 重置</button></div></div>
           </div>
           <div id="sm-right"></div>
         </div>
@@ -394,7 +397,7 @@ function go(p){
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
   var el=document.querySelector('.nav-item[data-page="'+p+'"]');if(el)el.classList.add('active');
   document.querySelectorAll('.page').forEach(function(e){e.classList.remove('active')});
-  var pg=document.getElementById('page-'+p);if(pg)pg.classList.add('active');
+  var pg=document.getElementById('page-'+p);if(pg){pg.classList.add('active');requestAnimationFrame(function(){pg.style.opacity='1'})}
   var t={radar:'热点雷达',knowledge:'知识脉络',story:'故事探索',zhishi:'知识专栏',starmap:'3D 星图',follow:'关注流',community:'圈子广场'};
   document.getElementById('pageTitle').textContent=t[p]||'';
   if(p==='starmap')initStarmap();
@@ -453,7 +456,7 @@ function fetchHot(){
     if(d&&d.Code===0&&d.Data&&d.Data.Items){
       var prevMap={};hotItems.forEach(function(it,idx){prevMap[it.Title]=idx+1});
       localStorage.setItem('zp_hot_prev',JSON.stringify(prevMap));
-      hotItems=d.Data.Items;cSet('hot_list',hotItems);usage.hot++;svUsage();localStorage.setItem('zp_hot_t',''+Date.now());updUsage();renderHotAPI();toast('热榜已更新','success');
+      hotItems=d.Data.Items;cSet('hot_list',hotItems);usage.hot++;svUsage();localStorage.setItem('zp_hot_t',''+Date.now());updUsage();hotHistory.push(hotItems.slice(0,10));if(hotHistory.length>20)hotHistory.shift();if(document.getElementById('hotTrend').style.display!=='none')renderTrend();renderHotAPI();toast('热榜已更新','success');
     }
     else{console.log('[hot_list] unexpected:',JSON.stringify(d).slice(0,300));renderHotDemo();toast('热榜返回异常: '+(d&&d.Message||JSON.stringify(d).slice(0,100)),'error')}
     document.getElementById('hotSpin').style.display='none';
@@ -489,6 +492,37 @@ function showHot(i){var it=hotItems[i];if(!it)return;var st=esc(it.Title).replac
 function showHotDemo(i){var demo=['AI能否拥有创造力？','2026年最值得学习的编程语言','量子计算会颠覆现有密码体系吗？','大模型为何会产生幻觉？','脑机接口最新突破','Agent协作：多智能体系统的未来','为什么说2026是Agent元年？','开源AI能否打败闭源模型？','人类意识能被数字化吗？','元宇宙是泡沫还是未来？','Python会被什么语言取代？','AI伦理：机器该拥有权利吗？'];var t=demo[i]||'';openModal(t,'<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-p btn-s" onclick="closeModal();go(\'knowledge\');document.getElementById(\'kgQ\').value=\''+esc(t).replace(/'/g,"\\'")+'\';buildKG()">构建脉络</button><button class="btn btn-s" onclick="closeModal();qc(\'请解读：'+esc(t).replace(/'/g,"\\'")+'\')">AI解读</button></div>')}
 var r3dScene,r3dCamera,r3dRenderer,r3dControls,r3dInited=false,r3dNodes=[],r3dLabels=[];
 function setRView(v){rView=v;document.getElementById('bL').className='btn'+(v==='list'?' btn-p':'');document.getElementById('bG').className='btn'+(v==='graph'?' btn-p':'');document.getElementById('b3D').className='btn'+(v==='3d'?' btn-p':'');document.getElementById('radarGraph').style.display=v==='graph'?'block':'none';document.getElementById('radarList').style.display=v==='list'?'block':'none';document.getElementById('radar3D').style.display=v==='3d'?'block':'none';if(v==='graph')renderRadarG();if(v==='3d')renderRadar3D()}
+var hotHistory=[];
+function toggleTrend(){var el=document.getElementById('hotTrend');var show=el.style.display==='none';el.style.display=show?'block':'none';if(show)renderTrend()}
+function renderTrend(){
+  if(!hotHistory.length){document.getElementById('trendLegend').innerHTML='<span style="color:var(--text2)">需要多次刷新热榜以积累趋势数据</span>';return}
+  var canvas=document.getElementById('trendCanvas');var ctx=canvas.getContext('2d');
+  canvas.width=canvas.clientWidth*2;canvas.height=360;
+  var w=canvas.width,h=canvas.height;
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--card').trim()||'#FFF';ctx.fillRect(0,0,w,h);
+  var topN=5,maxPts=hotHistory.length;
+  var colors=['#D97706','#2563EB','#0D9488','#9333EA','#DC2626'];
+  var names=[];
+  if(hotHistory[0]&&hotHistory[0].length)hotHistory[0].slice(0,topN).forEach(function(it){names.push(it.Title||'')});
+  var pad={l:50,r:20,t:20,b:40};
+  var gw=w-pad.l-pad.r,gh=h-pad.t-pad.b;
+  ctx.strokeStyle='rgba(0,0,0,.06)';ctx.lineWidth=1;
+  for(var i=0;i<=5;i++){var y=pad.t+gh*i/5;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillStyle='#9CA3AF';ctx.font='16px sans-serif';ctx.textAlign='right';ctx.fillText((topN-i)+'',pad.l-8,y+5)}
+  for(var rank=0;rank<topN;rank++){
+    if(!names[rank])continue;
+    ctx.strokeStyle=colors[rank];ctx.lineWidth=3;ctx.beginPath();
+    var hasPoint=false;
+    hotHistory.forEach(function(snap,si){
+      var idx=-1;snap.forEach(function(it,i){if((it.Title||'')===names[rank])idx=i});
+      var x=pad.l+si*Math.max(gw/(Math.max(maxPts-1,1)),2);
+      var y=pad.t+((idx>=0?idx:topN)/topN)*gh;
+      if(!hasPoint){ctx.moveTo(x,y);hasPoint=true}else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+  document.getElementById('trendLegend').innerHTML=names.map(function(n,i){return '<span style="color:'+colors[i]+'">● '+(n.length>10?n.slice(0,10)+'…':n)+'</span>'}).join('');
+  document.getElementById('trendTime').textContent='已记录 '+maxPts+' 次刷新';
+}
 function renderRadarG(){
   if(!hotItems.length)return;var svg=d3.select('#radarSvg');svg.selectAll('*').remove();
   var c=document.getElementById('radarGraph');var w=c.clientWidth,h=c.clientHeight;svg.attr('viewBox','0 0 '+w+' '+h);
@@ -676,6 +710,15 @@ function buildKG(){
   var p2=(ACCESS_SECRET||APP_KEY)?api('/api/v1/content/global_search?Query='+encodeURIComponent(q)+'&Count=10').then(function(r){console.log('[global_search]:',r);if(r&&r.Code===0&&r.Data&&r.Data.Items){kgData.gl=r.Data.Items;usage.search++;svUsage()}else toast('全网搜索异常: '+(r&&r.Message||''),'error')}).catch(function(e){console.log('[global_search] err:',e);toast('全网搜索失败: '+e.message,'error')}):Promise.resolve();
   Promise.all([p1,p2]).then(function(){renderKGGraph(q);renderKGList();document.getElementById('kgSpin').style.display='none';toast('知识脉络已构建','success')});
 }
+function genKnowledgeReport(){
+  var q=document.getElementById('kgQ').value.trim();
+  if(!q){toast('请先输入关键词','error');return}
+  var ctx='';
+  if(kgData.zh.length)ctx+='知乎站内结果：'+kgData.zh.slice(0,5).map(function(it){return (it.Title||'')+' - '+(it.Summary||'').slice(0,80)}).join('；');
+  if(kgData.gl.length)ctx+='全网结果：'+kgData.gl.slice(0,5).map(function(it){return (it.Title||'')+' - '+(it.Summary||'').slice(0,80)}).join('；');
+  var prompt='请针对「'+q+'」这个话题，生成一份完整的知识报告，包含：1）概念定义 2）发展历程 3）核心要点 4）前沿趋势 5）推荐阅读。'+(ctx?'参考以下搜索数据：'+ctx:'');
+  qc(prompt);
+}
 function renderKGGraph(q){
   var svg=d3.select('#kgSvg');svg.selectAll('*').remove();var c=document.getElementById('kgGraph');var w=c.clientWidth,h=c.clientHeight;svg.attr('viewBox','0 0 '+w+' '+h);
   var g=svg.append('g');kZoom=d3.zoom().scaleExtent([.3,3]).on('zoom',function(e){g.attr('transform',e.transform)});svg.call(kZoom);
@@ -701,7 +744,17 @@ function renderKGList(){
   gl.slice(0,12).forEach(function(it){h+='<div class="card" style="margin-bottom:0"><div style="font-weight:600;font-size:13px;margin-bottom:4px">'+(it.Url?'<a href="'+esc(it.Url)+'" target="_blank" style="color:var(--text);text-decoration:none">'+esc(it.Title||'')+'</a>':esc(it.Title||''))+'</div><p style="font-size:12px;color:var(--text2);line-height:1.6">'+esc((it.ContentText||it.Summary||'').slice(0,120))+'</p></div>'});
   h+='</div>';el.innerHTML=h;
 }
-function switchKT(t){document.querySelectorAll('[data-kt]').forEach(function(e){e.classList.toggle('active',e.dataset.kt===t)});document.getElementById('kgGraph').style.display=t==='graph'?'block':'none';document.getElementById('kgList').style.display=t==='list'?'block':'none';document.getElementById('kg3dWrap').style.display=t==='3d'?'block':'none';if(t==='3d')renderKG3d()}
+function switchKT(t){document.querySelectorAll('[data-kt]').forEach(function(e){e.classList.toggle('active',e.dataset.kt===t)});document.getElementById('kgGraph').style.display=t==='graph'?'block':'none';document.getElementById('kgList').style.display=t==='list'?'block':'none';document.getElementById('kg3dWrap').style.display=t==='3d'?'block':'none';document.getElementById('kgTimeline').style.display=t==='timeline'?'block':'none';if(t==='3d')renderKG3d();if(t==='timeline')renderTimeline()}
+function renderTimeline(){
+  var el=document.getElementById('tlContent');
+  if(!kgData.zh.length&&!kgData.gl.length){el.innerHTML='<div class="empty"><h3>请先搜索关键词</h3><p>搜索后可查看时间线视图</p></div>';return}
+  var all=[];
+  kgData.zh.forEach(function(it){all.push({title:it.Title||'',summary:it.Summary||it.ContentText||'',url:it.Url||'',author:it.AuthorName||'',source:'知乎',color:'var(--info)'})});
+  kgData.gl.forEach(function(it){all.push({title:it.Title||'',summary:it.Summary||it.ContentText||'',url:it.Url||'',author:it.AuthorName||'',source:'全网',color:'var(--success)'})});
+  el.innerHTML='<div style="font-size:14px;font-weight:600;margin-bottom:16px">知识时间线 · 「'+esc(document.getElementById('kgQ').value)+'」话题演化</div>'+all.map(function(it,i){
+    return '<div style="display:flex;gap:16px;margin-bottom:16px;position:relative"><div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:32px"><div style="width:12px;height:12px;border-radius:50%;background:'+it.color+';border:3px solid var(--card);box-shadow:0 0 0 2px '+it.color+'"></div>'+(i<all.length-1?'<div style="width:2px;flex:1;background:var(--border);margin-top:4px"></div>':'')+'</div><div style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:600;color:'+it.color+'">'+it.source+'</span><span style="font-size:10px;color:var(--text2)">结果 #'+(i+1)+'</span></div>'+(it.url?'<a href="'+esc(it.url)+'" target="_blank" style="font-size:13px;font-weight:500;color:var(--text);text-decoration:none;display:block;margin-bottom:4px">'+esc(it.title)+'</a>':'<div style="font-size:13px;font-weight:500;margin-bottom:4px">'+esc(it.title)+'</div>')+'<div style="font-size:12px;color:var(--text2);line-height:1.6">'+esc((it.summary||'').slice(0,120))+'</div>'+(it.author?'<div style="font-size:11px;color:var(--accent);margin-top:4px">— '+esc(it.author)+'</div>':'')+'</div></div>';
+  }).join('');
+}
 var kg3dScene=null,kg3dCamera=null,kg3dRenderer=null,kg3dControls=null,kg3dInited=false,kg3dNodes=[],kg3dClickable=[];
 function renderKG3d(){
   var wrap=document.getElementById('kg3dWrap');
@@ -1375,12 +1428,36 @@ function createSmGalaxies(){var pos=[new THREE.Vector3(-50,5,-30),new THREE.Vect
 function createSmPostNode(g,post,idx,total,color){var a=(idx/total)*Math.PI*2+Math.random()*0.5,d=6+Math.random()*14;var x=Math.cos(a)*d,y=(Math.random()-0.5)*4,z=Math.sin(a)*d;var s=Math.max(0.3,Math.min(1.5,0.3+(post.likes/500)*0.8));var m=new THREE.Mesh(new THREE.IcosahedronGeometry(s,1),new THREE.MeshBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:0.95}));m.position.set(x,y,z);m.userData={type:'post',post:post,baseScale:1,pulse:Math.random()*Math.PI*2,colorHex:color};g.add(m);postNodes.push(m)}
 function createSmNebula(){var nc=[0xD97706,0x0D9488,0xB09070];for(var n=0;n<6;n++){var c=300,g=new THREE.BufferGeometry(),p=new Float32Array(c*3);var ct=new THREE.Vector3((Math.random()-0.5)*150,(Math.random()-0.5)*40,(Math.random()-0.5)*150);for(var i=0;i<c;i++){p[i*3]=ct.x+(Math.random()-0.5)*30;p[i*3+1]=ct.y+(Math.random()-0.5)*15;p[i*3+2]=ct.z+(Math.random()-0.5)*30}g.setAttribute('position',new THREE.BufferAttribute(p,3));smScene.add(new THREE.Points(g,new THREE.PointsMaterial({size:2,color:nc[n%3],transparent:true,opacity:0.1,depthWrite:false})))}}
 function createSmStreams(){var gp=[new THREE.Vector3(-50,5,-30),new THREE.Vector3(50,-5,-20),new THREE.Vector3(0,0,50)];var pairs=[[0,1],[1,2],[0,2]],sc=[0xD97706,0x0D9488,0xB09070];pairs.forEach(function(pair,pi){var s=gp[pair[0]],e=gp[pair[1]],mid=new THREE.Vector3().addVectors(s,e).multiplyScalar(0.5);mid.y+=15+Math.random()*10;var curve=new THREE.QuadraticBezierCurve3(s,mid,e);smScene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(80)),new THREE.LineBasicMaterial({color:sc[pi],transparent:true,opacity:0.25})));var pn=40,pg=new THREE.BufferGeometry(),pp=new Float32Array(pn*3),pph=new Float32Array(pn);for(var i=0;i<pn;i++){var pt=curve.getPoint(i/pn);pp[i*3]=pt.x;pp[i*3+1]=pt.y;pp[i*3+2]=pt.z;pph[i]=i/pn}pg.setAttribute('position',new THREE.BufferAttribute(pp,3));var pts=new THREE.Points(pg,new THREE.PointsMaterial({size:1,color:sc[pi],transparent:true,opacity:0.6,depthWrite:false}));pts.userData={type:'estream',curve:curve,phases:pph,speed:0.002+Math.random()*0.002};smScene.add(pts);energyStreams.push(pts)})}
+var smReplayActive=false,smReplayPhase=0;
+function smTimeReplay(){
+  if(smReplayActive)return;smReplayActive=true;smReplayPhase=0;
+  smControls.autoRotate=false;
+  Object.keys(galaxyGroups).forEach(function(id){galaxyGroups[id].scale.set(0.01,0.01,0.01)});
+  toast('宇宙演化回放中...','info');
+}
+function smTimePause(){smReplayActive=!smReplayActive}
+function smTimeReset(){
+  smReplayActive=false;smReplayPhase=0;
+  Object.keys(galaxyGroups).forEach(function(id){galaxyGroups[id].scale.set(1,1,1)});
+  smControls.autoRotate=true;toast('已重置','success');
+}
 function animateSm(){
   if(!smInited)return;requestAnimationFrame(animateSm);
   var t=Date.now()*0.001;
   smScene.traverse(function(o){if(!o.userData)return;var u=o.userData;if(u.type==='post'){var p=Math.sin(t*1.5+u.pulse)*0.15+1;var ts=u.baseScale*p;if(o===hoveredNode)ts*=1.6;o.scale.lerp(new THREE.Vector3(ts,ts,ts),0.1);o.rotation.y+=0.003}if(u.type==='holo'){o.rotation.z+=u.speed;o.material.opacity=0.35+Math.sin(t+o.rotation.z)*0.12}if(u.type==='estream'){var ps=o.geometry.attributes.position.array;for(var i=0;i<u.phases.length;i++){u.phases[i]=(u.phases[i]+u.speed)%1;var pt=u.curve.getPoint(u.phases[i]);ps[i*3]=pt.x;ps[i*3+1]=pt.y;ps[i*3+2]=pt.z}o.geometry.attributes.position.needsUpdate=true;o.material.opacity=0.5+Math.sin(t*3)*0.2}});
   for(var si=shockwaves.length-1;si>=0;si--){var sw=shockwaves[si];sw.userData.life++;var pr=sw.userData.life/sw.userData.max;var ss=1+pr*30;sw.scale.set(ss,ss,ss);sw.material.opacity=0.6*(1-pr);sw.lookAt(smCamera.position);if(pr>=1){smScene.remove(sw);sw.geometry.dispose();sw.material.dispose();shockwaves.splice(si,1)}}
   Object.keys(galaxyGroups).forEach(function(id){galaxyGroups[id].rotation.y+=0.0003});
+  if(smReplayActive){
+    smReplayPhase+=0.005;
+    if(smReplayPhase>1)smReplayPhase=1;
+    var keys=Object.keys(galaxyGroups);
+    keys.forEach(function(id,idx){
+      var delay=idx*0.2;
+      var localPhase=Math.max(0,Math.min(1,(smReplayPhase-delay)/0.6));
+      var s=localPhase<1?(localPhase*localPhase*(3-2*localPhase)):1;
+      galaxyGroups[id].scale.set(s,s,s);
+    });
+  }
   if(flyTarget){var el=Date.now()-flyStartTime;var tt=Math.min(el/flyDuration,1);var ea=tt<0.5?4*tt*tt*tt:1-Math.pow(-2*tt+2,3)/2;smCamera.position.lerpVectors(flyStart,flyTarget,ea);if(flyLookAt)smControls.target.lerp(flyLookAt,ea*0.1);if(tt>=1)flyTarget=null}
   smControls.update();smRenderer.render(smScene,smCamera);
 }
