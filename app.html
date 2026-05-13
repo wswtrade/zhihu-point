@@ -1064,21 +1064,28 @@ function buildChatMsgs(){
   return msgs;
 }
 function sendZhidaChat(tid,msg){
-  if(!ACCESS_SECRET){updMsg(tid,'请先在设置中配置 Access Secret');return}
+  if(!ACCESS_SECRET){updMsg(tid,'请先在设置中配置 Access Secret（从 developer.zhihu.com 获取）');return}
   var msgs=buildChatMsgs();
   var body={model:AI_MODEL,messages:msgs,stream:true};
   var url=buildUrl('/v1/chat/completions');
   var headers=authHeaders();
   fetch(url,{method:'POST',headers:headers,body:JSON.stringify(body)}).then(function(resp){
-    if(!resp.ok){return resp.text().then(function(t){throw new Error('HTTP '+resp.status+': '+(t||''))})}
+    if(!resp.ok){return resp.text().then(function(t){throw new Error('HTTP '+resp.status+': '+(t||'').slice(0,200))})}
+    if(!resp.body){throw new Error('响应流不可用，请检查网络或CORS设置')}
     var reader=resp.body.getReader();
     var decoder=new TextDecoder();
-    var reasonBuf='',contentBuf='',done=false;
+    var reasonBuf='',contentBuf='',done=false,partial='';
     function pump(){
       return reader.read().then(function(result){
-        if(result.done||done)return;
+        if(result.done||done){
+          if(contentBuf){chatHist.push({role:'assistant',content:contentBuf});usage.ai++;svUsage();updHistUI()}
+          else if(!contentBuf&&!reasonBuf){updMsg(tid,'API 返回为空，请检查 Access Secret 或模型设置');chatHist.pop()}
+          return;
+        }
         var chunk=decoder.decode(result.value,{stream:true});
-        var lines=chunk.split('\n');
+        partial+=chunk;
+        var lines=partial.split('\n');
+        partial=lines.pop();
         lines.forEach(function(line){
           if(line.startsWith('data: ')){
             var data=line.slice(6).trim();
@@ -1096,20 +1103,24 @@ function sendZhidaChat(tid,msg){
           }
         });
         var html='';
-        if(reasonBuf&&!contentBuf)html='<details open style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">思考过程</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reasonBuf)+'</div></details><span class="spinner"></span> 生成中...';
-        else if(contentBuf){var md=contentBuf;try{md=typeof marked!=='undefined'?marked.parse(contentBuf):contentBuf}catch(e){}html=md}
+        if(reasonBuf&&!contentBuf)html='<details open style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reasonBuf)+'</div></details><div style="margin-top:4px"><span class="spinner"></span> 生成中...</div>';
+        else if(contentBuf){
+          html='<details style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程（'+reasonBuf.length+'字）</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reasonBuf)+'</div></details>';
+          var md=contentBuf;try{md=typeof marked!=='undefined'?marked.parse(contentBuf):contentBuf}catch(e){}
+          html+=md;
+        }
         if(html)updMsg(tid,html);
         if(!done)return pump();
         else{
           if(contentBuf){chatHist.push({role:'assistant',content:contentBuf});usage.ai++;svUsage()}
-          else if(!contentBuf&&reasonBuf){updMsg(tid,'API 返回为空');chatHist.pop()}
+          else{updMsg(tid,'AI 返回内容为空');chatHist.pop()}
           updHistUI();
         }
       });
     }
     return pump();
   }).catch(function(e){
-    console.log('[zhida] stream error, fallback to search:',e.message);
+    console.log('[zhida] stream error:',e.message);
     chatSearchFallback(tid,msg);
   });
 }
