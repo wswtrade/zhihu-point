@@ -262,7 +262,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
 <div id="pinModal" class="modal-bg" onclick="if(event.target===this)closePinModal()"><div class="modal"><h3>发布想法</h3><textarea id="pinContent" placeholder="分享你的想法..." style="min-height:100px"></textarea><div id="pinCircleSelect" style="margin-top:10px;display:flex;gap:6px"></div><div style="margin-top:10px;display:flex;justify-content:flex-end;gap:6px"><button class="btn btn-s" onclick="closePinModal()">取消</button><button class="btn btn-p btn-s" onclick="publishPin()">发布</button></div></div></div>
 <div id="settingsModal" class="modal-bg" onclick="if(event.target===this)closeSettings()"><div class="modal" style="width:480px"><h3>API 设置</h3><div style="font-size:12px;color:var(--accent);margin-bottom:12px;padding:8px;background:rgba(217,119,6,.06);border-radius:6px">开放平台 API（热榜/搜索/AI直答）</div><div class="s-field"><label>Access Secret（从 developer.zhihu.com 获取）</label><input type="text" id="sSecret" placeholder="输入你的 Access Secret"></div><div style="font-size:12px;color:var(--info);margin-bottom:12px;padding:8px;background:rgba(37,99,235,.06);border-radius:6px">社区 API（圈子/帖子/评论/发布）</div><div class="s-field"><label>App Key（用户 Token）</label><input type="text" id="sAppKey" placeholder="people/ 后面的内容"></div><div class="s-field"><label>App Secret（应用密钥）</label><input type="text" id="sAppSecret" placeholder="从 zhihu.com/ring/moltbook 获取"></div><div class="s-field"><label>AI 模型</label><select id="sModel" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:inherit;background:var(--bg)"><option value="zhida-thinking-1p5">深度思考</option><option value="zhida-fast-1p5">快速回答</option><option value="zhida-agent">智能思考</option></select></div><div class="s-field"><label>Agent 名称</label><input type="text" id="sAgentName" placeholder="给你的 Agent 起个名字"></div><div class="s-field"><label>Agent 人设 / System Prompt</label><textarea id="sAgentPrompt" style="min-height:60px" placeholder="描述你的 Agent 性格和行为风格..."></textarea></div><div style="display:flex;justify-content:flex-end;gap:6px;margin-top:16px"><button class="btn btn-s" onclick="closeSettings()">取消</button><button class="btn btn-p btn-s" onclick="saveSettings()">保存</button></div></div></div>
 
-<div id="loginModal" class="modal-bg" onclick="if(event.target===this)closeLoginModal()"><div class="modal" style="width:400px"><h3>登录知乎</h3><div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">点击按钮跳转知乎登录授权，授权完成后自动返回</div><button class="btn btn-p" style="width:100%;padding:10px;font-size:14px" onclick="doOAuthLogin()">🔑 知乎社区登录</button><div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px"><div style="font-size:12px;color:var(--text2);margin-bottom:8px">或者直接输入 Token：</div><div style="display:flex;gap:6px"><input type="text" id="loginToken" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:monospace;background:var(--card)" placeholder="粘贴 Access Token..."><button class="btn btn-p btn-s" onclick="doTokenLogin()">确定</button></div></div><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn btn-s" onclick="closeLoginModal()">取消</button></div></div></div>
+<div id="loginModal" class="modal-bg" onclick="if(event.target===this)closeLoginModal()"><div class="modal" style="width:360px"><h3>登录知乎</h3><div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">点击按钮跳转知乎授权登录</div><button class="btn btn-p" style="width:100%;padding:12px;font-size:14px" onclick="doOAuthLogin()">🔑 知乎社区登录</button><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn btn-s" onclick="closeLoginModal()">取消</button></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -852,69 +852,14 @@ function showSmDetail(p){
 
 var OAUTH_TOKEN='',OAUTH_USER=null;
 
-function showLoginModal(){document.getElementById('loginToken').value='';document.getElementById('loginModal').classList.add('show')}
+function showLoginModal(){document.getElementById('loginModal').classList.add('show')}
 function closeLoginModal(){document.getElementById('loginModal').classList.remove('show')}
 function doOAuthLogin(){
-  var redirectUri=window.location.href.split('?')[0].split('#')[0];
+  var redirectUri='https://wswtrade.github.io/zhihu-point/';
   var url='https://openapi.zhihu.com/authorize?app_id='+APP_KEY+'&response_type=code&redirect_uri='+encodeURIComponent(redirectUri);
-  var w=window.open(url,'zhihu_login','width=600,height=650,left='+(screen.width/2-300)+',top='+(screen.height/2-325)+',scrollbars=yes');
-  if(!w){window.location.href=url;return}
-  var timer=setInterval(function(){
-    try{
-      if(w.closed){clearInterval(timer);return}
-      var search=w.location.search;
-      if(search&&search.indexOf('code=')!==-1){
-        var m=search.match(/code=([^&#]+)/);
-        if(m&&m[1]){
-          var code=m[1];w.close();clearInterval(timer);
-          exchangeCode(code);
-        }
-      }
-    }catch(e){}
-  },500);
+  window.open(url,'zhihu_login','width=600,height=650,left='+(screen.width/2-300)+',top='+(screen.height/2-325)+',scrollbars=yes');
 }
-function doTokenLogin(){
-  var token=document.getElementById('loginToken').value.trim();
-  if(!token){toast('请输入 Token','error');return}
-  OAUTH_TOKEN=token;localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);
-  closeLoginModal();onLoginOk();
-}
-function zhihuLogout(){
-  OAUTH_TOKEN='';OAUTH_USER=null;
-  localStorage.removeItem('zp_oauth_token');localStorage.removeItem('zp_oauth_user');
-  document.getElementById('loginBtn').style.display='';
-  document.getElementById('logoutBtn').style.display='none';
-  document.getElementById('userInfo').style.display='none';
-  toast('已退出','info');
-}
-function onLoginOk(){
-  document.getElementById('loginBtn').style.display='none';
-  document.getElementById('logoutBtn').style.display='';
-  document.getElementById('userInfo').style.display='inline';
-  document.getElementById('userName').textContent='已登录';
-  document.getElementById('userAvatar').src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23D97706"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 10-16 0"/></svg>';
-  toast('登录成功','success');
-  fetchZhihuUser();
-}
-function fetchZhihuUser(){
-  if(!OAUTH_TOKEN)return;
-  fetch('https://openapi.zhihu.com/user',{headers:{'Authorization':'Bearer '+OAUTH_TOKEN}}).then(function(r){return r.json()}).then(function(d){
-    if(d.fullname){
-      OAUTH_USER=d;localStorage.setItem('zp_oauth_user',JSON.stringify({name:d.fullname,avatar_url:d.avatar_path,uid:d.uid}));
-      document.getElementById('userName').textContent=d.fullname;
-      if(d.avatar_path)document.getElementById('userAvatar').src=d.avatar_path;
-    }
-  }).catch(function(){});
-}
-function exchangeCode(code){
-  var redirectUri=window.location.href.split('?')[0].split('#')[0];
-  fetch('https://openapi.zhihu.com/access_token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'app_id='+APP_KEY+'&app_key='+APP_SECRET+'&grant_type=authorization_code&redirect_uri='+encodeURIComponent(redirectUri)+'&code='+code}).then(function(r){return r.json()}).then(function(d){
-    if(d.access_token){
-      OAUTH_TOKEN=d.access_token;localStorage.setItem('zp_oauth_token',OAUTH_TOKEN);
-      onLoginOk();
-    }else{toast('获取Token失败: '+(d.data||JSON.stringify(d)),'error')}
-  }).catch(function(e){toast('Token交换失败: '+e.message,'error')});
-}
+
 
 function initApp(){
   if(!localStorage.getItem('zp_secret'))localStorage.setItem('zp_secret','a7H63P4osCI0ydhXg99M5xeyAdSZkYQs');
