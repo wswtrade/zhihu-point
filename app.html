@@ -1342,12 +1342,10 @@ function initStarmap(){
     model.traverse(function(child){
       if(child.isMesh){
         meshCount++;
-        console.log('[kanshan] mesh:',child.name,'geo:',child.geometry?'ok':'missing','material before:',child.material?child.material.type:'null');
-        child.material=new THREE.MeshPhongMaterial({color:0x0066FF,shininess:60,emissive:0x003399,emissiveIntensity:0.15});
-        console.log('[kanshan] material after:',child.material.type,'color:',child.material.color.getHexString());
+        if(child.geometry&&!child.geometry.attributes.normal)child.geometry.computeVertexNormals();
+        child.material=new THREE.MeshPhongMaterial({color:0x0066FF,shininess:60,emissive:0x003399,emissiveIntensity:0.3,flatShading:true});
       }
     });
-    console.log('[kanshan] total meshes:',meshCount);
     model.userData={type:'kanshan'};
     smScene.add(model);
     var hl=new THREE.DirectionalLight(0x0066FF,0.5);hl.position.set(-3,5,-5);smScene.add(hl);
