@@ -901,12 +901,19 @@ function initApp(){
   if(ACCESS_SECRET)fetchHot();
   else renderHotDemo();
 }
+if(window.location.search&&window.location.search.indexOf('code=')!==-1){
+  var _m=window.location.search.match(/code=([^&#]+)/);
+  if(_m&&_m[1]){
+    var _code=_m[1];
+    document.title='登录成功';document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif"><h2 style="color:#D97706">✅ 登录成功，正在返回...</h2></div>';
+    if(window.opener){try{window.opener.exchangeCode(_code)}catch(e){}}
+    else{exchangeCode(_code)}
+    setTimeout(function(){try{window.close()}catch(e){}},1000);
+  }
+}else{
 initLanding();
-if(window.opener&&window.location.search&&window.location.search.indexOf('code=')!==-1){
-  var m=window.location.search.match(/code=([^&#]+)/);
-  if(m&&m[1]){try{window.opener.exchangeCode(m[1])}catch(e){}window.close()}
-}
 window.addEventListener('resize',function(){if(lCanvas){lCanvas.width=window.innerWidth;lCanvas.height=window.innerHeight}onSmResize()});
+}
 </script>
 </body>
 </html>
