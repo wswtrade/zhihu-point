@@ -474,10 +474,10 @@ function renderRadar3D(){
   if(!hotItems.length){wrap.innerHTML='<div class="empty"><h3>请先刷新热榜</h3></div>';return}
   if(!r3dInited){
     r3dScene=new THREE.Scene();
-    r3dScene.background=new THREE.Color(0xFAF7F2);
-    r3dScene.fog=new THREE.FogExp2(0xFAF7F2,0.008);
-    r3dCamera=new THREE.PerspectiveCamera(60,wrap.clientWidth/wrap.clientHeight,0.1,500);
-    r3dCamera.position.set(0,18,35);
+    r3dScene.background=new THREE.Color(0x0A0A1A);
+    r3dScene.fog=new THREE.FogExp2(0x0A0A1A,0.004);
+    r3dCamera=new THREE.PerspectiveCamera(60,wrap.clientWidth/wrap.clientHeight,0.1,2000);
+    r3dCamera.position.set(0,25,50);
     r3dRenderer=new THREE.WebGLRenderer({antialias:true});
     r3dRenderer.setSize(wrap.clientWidth,wrap.clientHeight);
     r3dRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
@@ -487,75 +487,79 @@ function renderRadar3D(){
     r3dControls.enableDamping=true;
     r3dControls.dampingFactor=0.05;
     r3dControls.autoRotate=true;
-    r3dControls.autoRotateSpeed=0.5;
-    r3dControls.minDistance=8;
-    r3dControls.maxDistance=100;
-    var amb=new THREE.AmbientLight(0xffffff,0.6);
+    r3dControls.autoRotateSpeed=0.3;
+    r3dControls.minDistance=15;
+    r3dControls.maxDistance=120;
+    var amb=new THREE.AmbientLight(0x223355,0.4);
     r3dScene.add(amb);
-    var dir=new THREE.DirectionalLight(0xffffff,0.8);
-    dir.position.set(20,30,20);
+    var dir=new THREE.DirectionalLight(0xFFE4B5,0.6);
+    dir.position.set(30,40,20);
     r3dScene.add(dir);
+    var pt=new THREE.PointLight(0xD97706,1.5,200);
+    pt.position.set(0,0,0);
+    r3dScene.add(pt);
     r3dInited=true;
   }
-  r3dScene.children=r3dScene.children.filter(function(c){
-    if(c===r3dScene.children[0]||c===r3dScene.children[1])return true;
-    if(c.isLight)return true;
-    return false;
-  });
+  r3dScene.children=r3dScene.children.filter(function(c){return c.isLight});
   r3dNodes=[];r3dLabels=[];
+  var planetR=12;
+  var planetGeo=new THREE.SphereGeometry(planetR,64,64);
+  var planetMat=new THREE.MeshPhongMaterial({color:0x1A1A3E,emissive:0x0D0D2B,emissiveIntensity:0.6,transparent:true,opacity:0.85,shininess:40});
+  var planet=new THREE.Mesh(planetGeo,planetMat);
+  r3dScene.add(planet);
+  var glowGeo=new THREE.SphereGeometry(planetR*1.08,64,64);
+  var glowMat=new THREE.MeshBasicMaterial({color:0xD97706,transparent:true,opacity:0.08,side:THREE.BackSide});
+  r3dScene.add(new THREE.Mesh(glowGeo,glowMat));
+  var atmosphereGeo=new THREE.SphereGeometry(planetR*1.18,64,64);
+  var atmosphereMat=new THREE.MeshBasicMaterial({color:0x2563EB,transparent:true,opacity:0.04,side:THREE.BackSide});
+  r3dScene.add(new THREE.Mesh(atmosphereGeo,atmosphereMat));
+  var gridGeo=new THREE.IcosahedronGeometry(planetR*1.001,3);
+  var gridMat=new THREE.MeshBasicMaterial({color:0x334477,wireframe:true,transparent:true,opacity:0.12});
+  r3dScene.add(new THREE.Mesh(gridGeo,gridMat));
   var items=hotItems.slice(0,20);
-  var colors=[0xD97706,0xEA580C,0x0D9488,0x2563EB,0x7C3AED,0x16A34A,0xDC2626,0x9333EA];
-  var itemsPerRing=Math.min(items.length,10);
+  var heatColors=[0xFF4500,0xFF6B00,0xFFA500,0xFFD700,0xFFEA00];
   items.forEach(function(it,i){
-    var ring=Math.floor(i/itemsPerRing);
-    var posInRing=i%itemsPerRing;
-    var angle=(posInRing/itemsPerRing)*Math.PI*2+ring*0.3;
-    var radius=16+ring*12;
-    var x=Math.cos(angle)*radius;
-    var z=Math.sin(angle)*radius;
-    var y=(Math.random()-0.5)*6;
-    var size=Math.max(1.2,4-i*0.12);
-    var geo=new THREE.IcosahedronGeometry(size,1);
-    var colorIdx=i%colors.length;
-    var mat=new THREE.MeshPhongMaterial({color:colors[colorIdx],transparent:true,opacity:0.9,shininess:80});
+    var phi=Math.acos(1-2*(i+0.5)/items.length);
+    var theta=Math.PI*(1+Math.sqrt(5))*(i+0.5);
+    var x=planetR*1.15*Math.sin(phi)*Math.cos(theta);
+    var y=planetR*1.15*Math.sin(phi)*Math.sin(theta);
+    var z=planetR*1.15*Math.cos(phi);
+    var heat=Math.max(0,Math.min(1,1-i/20));
+    var colorIdx=Math.min(Math.floor(heat*heatColors.length),heatColors.length-1);
+    var sz=Math.max(0.6,2.2-heat*1.6+0.6);
+    var geo=new THREE.IcosahedronGeometry(sz,1);
+    var mat=new THREE.MeshPhongMaterial({color:heatColors[colorIdx],emissive:heatColors[colorIdx],emissiveIntensity:0.5+heat*0.5,transparent:true,opacity:0.95});
     var mesh=new THREE.Mesh(geo,mat);
     mesh.position.set(x,y,z);
-    mesh.userData={idx:i,title:it.Title||'',summary:(it.Summary||'').slice(0,60),pulse:Math.random()*Math.PI*2};
+    mesh.userData={idx:i,title:it.Title||'',summary:(it.Summary||'').slice(0,60),pulse:Math.random()*Math.PI*2,heat:heat};
     r3dScene.add(mesh);
     r3dNodes.push(mesh);
-    var label=(function(txt,sz){
-      var cv=document.createElement('canvas');cv.width=512;cv.height=96;
-      var cx=cv.getContext('2d');cx.clearRect(0,0,512,96);
-      cx.font='bold 36px "Noto Sans SC",sans-serif';
-      cx.fillStyle='#3D3529';cx.textAlign='center';cx.textBaseline='middle';
-      var display=txt.length>10?txt.slice(0,10)+'…':txt;
-      cx.fillText('#'+(i+1)+' '+display,256,48);
-      var tex=new THREE.CanvasTexture(cv);tex.needsUpdate=true;
-      var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
-      sp.scale.set(Math.max(8,sz*5),Math.max(1.5,sz*0.9),1);
-      return sp;
-    })(it.Title||'',size);
-    label.position.set(x,y-size-1.2,z);
-    r3dScene.add(label);
-    r3dLabels.push(label);
-    var ringGeo=new THREE.RingGeometry(size+0.2,size+0.4,32);
-    var ringMat=new THREE.MeshBasicMaterial({color:colors[colorIdx],transparent:true,opacity:0.3,side:THREE.DoubleSide});
+    var ringGeo=new THREE.RingGeometry(sz+0.3,sz+0.6,32);
+    var ringMat=new THREE.MeshBasicMaterial({color:heatColors[colorIdx],transparent:true,opacity:0.2+heat*0.3,side:THREE.DoubleSide});
     var ringMesh=new THREE.Mesh(ringGeo,ringMat);
     ringMesh.position.copy(mesh.position);
-    ringMesh.lookAt(r3dCamera.position);
+    ringMesh.lookAt(0,0,0);
     ringMesh.userData={type:'halo'};
     r3dScene.add(ringMesh);
+    var cv=document.createElement('canvas');cv.width=512;cv.height=64;
+    var cx=cv.getContext('2d');cx.clearRect(0,0,512,64);
+    cx.font='bold 28px "Noto Sans SC",sans-serif';
+    cx.fillStyle='#FFFFFF';cx.textAlign='center';cx.textBaseline='middle';
+    var display=(it.Title||'').length>12?(it.Title||'').slice(0,12)+'…':(it.Title||'');
+    cx.fillText('#'+(i+1)+' '+display,256,32);
+    var tex=new THREE.CanvasTexture(cv);tex.needsUpdate=true;
+    var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false,opacity:0.85}));
+    sp.scale.set(Math.max(6,sz*4),Math.max(1,sz*0.6),1);
+    var dir2=new THREE.Vector3(x,y,z).normalize();
+    sp.position.set(x+dir2.x*3,y+dir2.y*3,z+dir2.z*3);
+    r3dScene.add(sp);
+    r3dLabels.push(sp);
   });
-  var centerGeo=new THREE.SphereGeometry(1.5,32,32);
-  var centerMat=new THREE.MeshPhongMaterial({color:0xD97706,emissive:0xD97706,emissiveIntensity:0.3,transparent:true,opacity:0.95});
-  var center=new THREE.Mesh(centerGeo,centerMat);
-  center.position.set(0,0,0);
-  r3dScene.add(center);
   var bgGeo=new THREE.BufferGeometry();
-  var bgCount=2000;
+  var bgCount=4000;
   var bgPos=new Float32Array(bgCount*3);
   for(var i=0;i<bgCount;i++){
-    var r=50+Math.random()*100;
+    var r=80+Math.random()*300;
     var t=Math.random()*Math.PI*2;
     var p=Math.acos(2*Math.random()-1);
     bgPos[i*3]=r*Math.sin(p)*Math.cos(t);
@@ -563,15 +567,27 @@ function renderRadar3D(){
     bgPos[i*3+2]=r*Math.cos(p);
   }
   bgGeo.setAttribute('position',new THREE.BufferAttribute(bgPos,3));
-  var bgMat=new THREE.PointsMaterial({size:0.5,color:0xC4A882,transparent:true,opacity:0.4,depthWrite:false});
+  var bgMat=new THREE.PointsMaterial({size:0.4,color:0x8899BB,transparent:true,opacity:0.5,depthWrite:false});
   r3dScene.add(new THREE.Points(bgGeo,bgMat));
+  if(!document.getElementById('r3dTip')){var tipEl=document.createElement('div');tipEl.id='r3dTip';tipEl.style.cssText='position:fixed;z-index:9999;background:rgba(26,26,58,0.92);color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;max-width:260px;pointer-events:none;display:none;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,.4)';document.body.appendChild(tipEl)}
+  var r3dTip=document.getElementById('r3dTip');
   r3dRenderer.domElement.onclick=function(ev){
     var rect=r3dRenderer.domElement.getBoundingClientRect();
     var mouse=new THREE.Vector2(((ev.clientX-rect.left)/rect.width)*2-1,-((ev.clientY-rect.top)/rect.height)*2+1);
     var ray=new THREE.Raycaster();
     ray.setFromCamera(mouse,r3dCamera);
     var hits=ray.intersectObjects(r3dNodes);
-    if(hits.length>0){var nd=hits[0].object;if(nd.userData.idx!==undefined)showHot(nd.userData.idx)}
+    if(hits.length>0){
+      var nd=hits[0].object;
+      if(nd.userData.idx!==undefined)showHot(nd.userData.idx);
+      var swGeo=new THREE.RingGeometry(0.5,1,32);
+      var swMat=new THREE.MeshBasicMaterial({color:0xFF6B00,transparent:true,opacity:0.5,side:THREE.DoubleSide});
+      var swMesh=new THREE.Mesh(swGeo,swMat);
+      swMesh.position.copy(nd.position);
+      swMesh.lookAt(0,0,0);
+      r3dScene.add(swMesh);
+      r3dShockwaves.push({mesh:swMesh,start:Date.now()});
+    }
   };
   r3dRenderer.domElement.onmousemove=function(ev){
     var rect=r3dRenderer.domElement.getBoundingClientRect();
@@ -579,16 +595,34 @@ function renderRadar3D(){
     var ray=new THREE.Raycaster();
     ray.setFromCamera(mouse,r3dCamera);
     var hits=ray.intersectObjects(r3dNodes);
-    r3dRenderer.domElement.style.cursor=hits.length>0?'pointer':'default';
+    if(hits.length>0){
+      var nd=hits[0].object;
+      r3dTip.style.display='block';
+      r3dTip.style.left=(ev.clientX+12)+'px';
+      r3dTip.style.top=(ev.clientY-8)+'px';
+      r3dTip.innerHTML='<b>#'+(nd.userData.idx+1)+' '+(nd.userData.title||'')+'</b><br><span style="opacity:.7">'+(nd.userData.summary||'')+'</span>';
+      r3dRenderer.domElement.style.cursor='pointer';
+    }else{
+      r3dTip.style.display='none';
+      r3dRenderer.domElement.style.cursor='default';
+    }
   };
   if(r3dRAF)cancelAnimationFrame(r3dRAF);
+  var r3dShockwaves=[];
   (function anim(){
     r3dRAF=requestAnimationFrame(anim);
     var t=Date.now()*0.001;
     r3dNodes.forEach(function(n){
-      var s=1+Math.sin(t*1.2+n.userData.pulse)*0.12;
+      var s=1+Math.sin(t*1.5+n.userData.pulse)*0.15*(0.5+n.userData.heat);
       n.scale.set(s,s,s);
-      n.rotation.y+=0.005;
+      n.rotation.y+=0.008;
+    });
+    r3dShockwaves=r3dShockwaves.filter(function(sw){
+      var age=(Date.now()-sw.start)/800;
+      if(age>1){r3dScene.remove(sw.mesh);return false}
+      sw.mesh.scale.set(1+age*3,1+age*3,1+age*3);
+      sw.mesh.material.opacity=0.5*(1-age);
+      return true;
     });
     r3dControls.update();
     r3dRenderer.render(r3dScene,r3dCamera);
@@ -935,13 +969,19 @@ function getContext(){
   var id=pg.id;
   var ctx='';
   if(id==='page-radar'&&hotItems.length){
-    ctx='当前页面：热点雷达。当前热榜前5：'+hotItems.slice(0,5).map(function(it,i){return (i+1)+'. '+it.Title}).join('；');
+    ctx='当前页面：热点雷达。当前热榜前10：'+hotItems.slice(0,10).map(function(it,i){return (i+1)+'. '+it.Title+'（热度'+(it.Heat||0)+'）'}).join('；');
   }else if(id==='page-community'&&ringData.length){
-    ctx='当前页面：圈子广场。最新帖子：'+ringData.slice(0,3).map(function(p){return (p.Title||p.title||'')+' - '+(p.Content||p.content||'').slice(0,40)}).join('；');
+    ctx='当前页面：圈子广场。最新帖子：'+ringData.slice(0,5).map(function(p){return (p.Title||p.title||'无标题')+' - '+(p.Content||p.content||'').slice(0,60)}).join('；');
   }else if(id==='page-story'){
-    ctx='当前页面：故事探索。故事列表：'+stories.map(function(s){return s.title}).join('、');
+    ctx='当前页面：故事探索。故事列表：'+stories.map(function(s){return '《'+s.title+'》('+s.tag+', 作者:'+s.author+')'}).join('、')+'。用户可能想要续写或讨论这些故事。';
   }else if(id==='page-zhishi'){
-    ctx='当前页面：知识专栏。专栏文章：'+knowledge.map(function(k){return k.title}).join('、');
+    ctx='当前页面：知识专栏。专栏文章：'+knowledge.map(function(k){return '《'+k.title+'》- '+k.desc}).join('；');
+  }else if(id==='page-follow'){
+    ctx='当前页面：关注流。展示用户关注列表和粉丝信息。';
+  }else if(id==='page-starmap'){
+    ctx='当前页面：3D星图。展示知乎圈子（OpenClaw、A2A、黑客松）的3D可视化。'+(ringData.length?'当前有'+ringData.length+'条帖子数据。':'');
+  }else if(id==='page-knowledge'){
+    ctx='当前页面：知识脉络。用户可以搜索关键词构建知识图谱。';
   }
   return ctx;
 }
@@ -974,9 +1014,18 @@ function sendChat(){
   if(CHAT_PROVIDER==='deepseek'){sendDSChat(tid,msg);return}
   sendZhidaChat(tid,msg);
 }
+function buildChatMsgs(){
+  var msgs=[];
+  var sys='你是知点 ZhiPoint 的AI助手，基于知乎海量知识库回答问题。回答要准确、有深度、有条理。';
+  var ctx=getContext();
+  if(ctx)sys+='\n\n'+ctx;
+  msgs.push({role:'system',content:sys});
+  chatHist.slice(-10).forEach(function(m){msgs.push({role:m.role,content:m.content})});
+  return msgs;
+}
 function sendZhidaChat(tid,msg){
   if(!ACCESS_SECRET){updMsg(tid,'请先在设置中配置 Access Secret');return}
-  var msgs=chatHist.slice(-10).map(function(m){return{role:m.role,content:m.content}});
+  var msgs=buildChatMsgs();
   var body={model:AI_MODEL,messages:msgs,stream:true};
   var url=buildUrl('/v1/chat/completions');
   var headers=authHeaders();
@@ -1026,7 +1075,7 @@ function sendZhidaChat(tid,msg){
 }
 function sendKimiChat(tid,msg){
   if(!KIMI_API_KEY){updMsg(tid,'请先在设置中配置 Kimi API Key（从 platform.moonshot.cn 获取）');return}
-  var msgs=chatHist.slice(-10).map(function(m){return{role:m.role,content:m.content}});
+  var msgs=buildChatMsgs();
   fetch(KIMI_BASE+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+KIMI_API_KEY},body:JSON.stringify({model:KIMI_MODEL,messages:msgs,stream:false,max_tokens:4096})}).then(function(r){
     if(!r.ok)throw new Error('HTTP '+r.status);
     return r.json();
@@ -1044,7 +1093,7 @@ function sendKimiChat(tid,msg){
 }
 function sendDSChat(tid,msg){
   if(!DS_API_KEY){updMsg(tid,'请先在设置中配置 DeepSeek API Key（从 platform.deepseek.com 获取）');return}
-  var msgs=chatHist.slice(-10).map(function(m){return{role:m.role,content:m.content}});
+  var msgs=buildChatMsgs();
   fetch(DS_BASE+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+DS_API_KEY},body:JSON.stringify({model:DS_MODEL,messages:msgs,stream:false,max_tokens:4096})}).then(function(r){
     if(!r.ok)throw new Error('HTTP '+r.status);
     return r.json();
@@ -1116,10 +1165,18 @@ var RING_DEMO=[
 function fetchRing(){
   ringData=RING_DEMO.slice();renderRing();
   if(APP_KEY&&APP_SECRET){
-    commApi('/openapi/ring/detail?ring_id='+CIRCLE_ID).then(function(d){
-      var items=d.data&&d.data.Items||d.data||d.items||[];
-      if(Array.isArray(items)&&items.length){ringData=items;renderRing();toast('帖子已加载','success')}
-    }).catch(function(e){console.log('[ring] API failed, using demo:',e.message)});
+    CIRCLES.forEach(function(c){
+      commApi('/openapi/ring/detail?ring_id='+c.id).then(function(d){
+        var items=d.data&&d.data.Items||d.data||d.items||[];
+        if(Array.isArray(items)&&items.length){
+          items.forEach(function(it){it.CircleID=c.id;it.circle_id=c.id});
+          var existing=ringData.filter(function(r){return(r.CircleID||r.circle_id)!==c.id});
+          ringData=existing.concat(items);
+          renderRing();
+          if(c.id===CIRCLE_ID)toast(c.name+'帖子已加载','success');
+        }
+      }).catch(function(e){console.log('[ring:'+c.name+'] API failed:',e.message)});
+    });
   }
 }
 function renderRing(){
@@ -1192,10 +1249,23 @@ function initStarmap(){
   createSmStars();createSmGalaxies();createSmNebula();createSmStreams();
   smRenderer.domElement.addEventListener('click',onSmClick);smRenderer.domElement.addEventListener('mousemove',onSmMove);
   renderSmCircles();renderSmPosts();
+  if(!ringData.some(function(r){return r.CircleID||r.circle_id})){
+    fetchRing();
+    setTimeout(function(){
+      if(postNodes.length===0||ringData.some(function(r){return r.CircleID||r.circle_id})){
+        postNodes=[];createSmGalaxies();renderSmPosts();
+      }
+    },4000);
+  }
   animateSm();
 }
 function createSmStars(){var g=new THREE.BufferGeometry(),n=6000,p=new Float32Array(n*3),c=new Float32Array(n*3);for(var i=0;i<n;i++){var r=200+Math.random()*500,t=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);p[i*3]=r*Math.sin(ph)*Math.cos(t);p[i*3+1]=r*Math.sin(ph)*Math.sin(t);p[i*3+2]=r*Math.cos(ph);var b=0.15+Math.random()*0.5,h=Math.random();if(h<0.33){c[i*3]=0.85;c[i*3+1]=0.6;c[i*3+2]=0.2}else if(h<0.66){c[i*3]=0.15;c[i*3+1]=0.55;c[i*3+2]=0.52}else{c[i*3]=0.75;c[i*3+1]=0.35;c[i*3+2]=0.15}c[i*3]*=b;c[i*3+1]*=b;c[i*3+2]*=b}g.setAttribute('position',new THREE.BufferAttribute(p,3));g.setAttribute('color',new THREE.BufferAttribute(c,3));smScene.add(new THREE.Points(g,new THREE.PointsMaterial({size:1.5,vertexColors:true,transparent:true,opacity:0.7,depthWrite:false})))}
-function createSmGalaxies(){var pos=[new THREE.Vector3(-50,5,-30),new THREE.Vector3(50,-5,-20),new THREE.Vector3(0,0,50)];CIRCLES.forEach(function(ci,idx){var g=new THREE.Group();g.position.copy(pos[idx]);smScene.add(g);galaxyGroups[ci.id]=g;var cc=new THREE.Color(ci.color);g.add(new THREE.Mesh(new THREE.SphereGeometry(2,32,32),new THREE.MeshBasicMaterial({color:cc,transparent:true,opacity:1})));g.add(new THREE.Mesh(new THREE.SphereGeometry(4,32,32),new THREE.MeshBasicMaterial({color:cc,transparent:true,opacity:0.25,side:THREE.BackSide})));var hr=new THREE.Mesh(new THREE.TorusGeometry(5,0.08,16,100),new THREE.MeshBasicMaterial({color:cc,transparent:true,opacity:0.5}));hr.rotation.x=Math.PI/2+0.3;hr.userData={type:'holo',speed:0.005};g.add(hr);var dc=2000,dp=new Float32Array(dc*3),dcol=new Float32Array(dc*3);for(var i=0;i<dc;i++){var arm=Math.floor(Math.random()*3),aa=arm*(Math.PI*2/3),d=3+Math.random()*20;var sa=aa+d*0.12+(Math.random()-0.5)*0.8,sp=(Math.random()-0.5)*(2+d*0.15);dp[i*3]=Math.cos(sa)*d+sp;dp[i*3+1]=(Math.random()-0.5)*1.5*(1-d/25);dp[i*3+2]=Math.sin(sa)*d+sp;var f=1-d/25;dcol[i*3]=cc.r*f*(0.5+Math.random()*0.5);dcol[i*3+1]=cc.g*f*(0.5+Math.random()*0.5);dcol[i*3+2]=cc.b*f*(0.5+Math.random()*0.5)}var dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(dp,3));dg.setAttribute('color',new THREE.BufferAttribute(dcol,3));g.add(new THREE.Points(dg,new THREE.PointsMaterial({size:0.4,vertexColors:true,transparent:true,opacity:0.7,depthWrite:false,sizeAttenuation:true})));var posts=MOCK_SM_POSTS[ci.id]||[],pc=Math.min(posts.length,20);for(var j=0;j<pc;j++)createSmPostNode(g,posts[j],j,pc,ci.color)})}
+function createSmGalaxies(){var pos=[new THREE.Vector3(-50,5,-30),new THREE.Vector3(50,-5,-20),new THREE.Vector3(0,0,50)];CIRCLES.forEach(function(ci,idx){var g=new THREE.Group();g.position.copy(pos[idx]);smScene.add(g);galaxyGroups[ci.id]=g;var cc=new THREE.Color(ci.color);g.add(new THREE.Mesh(new THREE.SphereGeometry(2,32,32),new THREE.MeshBasicMaterial({color:cc,transparent:true,opacity:1})));g.add(new THREE.Mesh(new THREE.SphereGeometry(4,32,32),new THREE.MeshBasicMaterial({color:cc,transparent:true,opacity:0.25,side:THREE.BackSide})));var hr=new THREE.Mesh(new THREE.TorusGeometry(5,0.08,16,100),new THREE.MeshBasicMaterial({color:cc,transparent:true,opacity:0.5}));hr.rotation.x=Math.PI/2+0.3;hr.userData={type:'holo',speed:0.005};g.add(hr);var dc=2000,dp=new Float32Array(dc*3),dcol=new Float32Array(dc*3);for(var i=0;i<dc;i++){var arm=Math.floor(Math.random()*3),aa=arm*(Math.PI*2/3),d=3+Math.random()*20;var sa=aa+d*0.12+(Math.random()-0.5)*0.8,sp=(Math.random()-0.5)*(2+d*0.15);dp[i*3]=Math.cos(sa)*d+sp;dp[i*3+1]=(Math.random()-0.5)*1.5*(1-d/25);dp[i*3+2]=Math.sin(sa)*d+sp;var f=1-d/25;dcol[i*3]=cc.r*f*(0.5+Math.random()*0.5);dcol[i*3+1]=cc.g*f*(0.5+Math.random()*0.5);dcol[i*3+2]=cc.b*f*(0.5+Math.random()*0.5)}var dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(dp,3));dg.setAttribute('color',new THREE.BufferAttribute(dcol,3));g.add(new THREE.Points(dg,new THREE.PointsMaterial({size:0.4,vertexColors:true,transparent:true,opacity:0.7,depthWrite:false,sizeAttenuation:true})));    var posts=[];
+    if(ringData&&ringData.length){
+      ringData.forEach(function(p){if((p.CircleID||p.circle_id||p.ring_id||'')===ci.id||(CIRCLE_ID===ci.id))posts.push(p)});
+    }
+    if(!posts.length)posts=MOCK_SM_POSTS[ci.id]||[];
+    var pc=Math.min(posts.length,20);for(var j=0;j<pc;j++)createSmPostNode(g,posts[j],j,pc,ci.color)})}
 function createSmPostNode(g,post,idx,total,color){var a=(idx/total)*Math.PI*2+Math.random()*0.5,d=6+Math.random()*14;var x=Math.cos(a)*d,y=(Math.random()-0.5)*4,z=Math.sin(a)*d;var s=Math.max(0.3,Math.min(1.5,0.3+(post.likes/500)*0.8));var m=new THREE.Mesh(new THREE.IcosahedronGeometry(s,1),new THREE.MeshBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:0.95}));m.position.set(x,y,z);m.userData={type:'post',post:post,baseScale:1,pulse:Math.random()*Math.PI*2,colorHex:color};g.add(m);postNodes.push(m)}
 function createSmNebula(){var nc=[0xD97706,0x0D9488,0xB09070];for(var n=0;n<6;n++){var c=300,g=new THREE.BufferGeometry(),p=new Float32Array(c*3);var ct=new THREE.Vector3((Math.random()-0.5)*150,(Math.random()-0.5)*40,(Math.random()-0.5)*150);for(var i=0;i<c;i++){p[i*3]=ct.x+(Math.random()-0.5)*30;p[i*3+1]=ct.y+(Math.random()-0.5)*15;p[i*3+2]=ct.z+(Math.random()-0.5)*30}g.setAttribute('position',new THREE.BufferAttribute(p,3));smScene.add(new THREE.Points(g,new THREE.PointsMaterial({size:2,color:nc[n%3],transparent:true,opacity:0.1,depthWrite:false})))}}
 function createSmStreams(){var gp=[new THREE.Vector3(-50,5,-30),new THREE.Vector3(50,-5,-20),new THREE.Vector3(0,0,50)];var pairs=[[0,1],[1,2],[0,2]],sc=[0xD97706,0x0D9488,0xB09070];pairs.forEach(function(pair,pi){var s=gp[pair[0]],e=gp[pair[1]],mid=new THREE.Vector3().addVectors(s,e).multiplyScalar(0.5);mid.y+=15+Math.random()*10;var curve=new THREE.QuadraticBezierCurve3(s,mid,e);smScene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(80)),new THREE.LineBasicMaterial({color:sc[pi],transparent:true,opacity:0.25})));var pn=40,pg=new THREE.BufferGeometry(),pp=new Float32Array(pn*3),pph=new Float32Array(pn);for(var i=0;i<pn;i++){var pt=curve.getPoint(i/pn);pp[i*3]=pt.x;pp[i*3+1]=pt.y;pp[i*3+2]=pt.z;pph[i]=i/pn}pg.setAttribute('position',new THREE.BufferAttribute(pp,3));var pts=new THREE.Points(pg,new THREE.PointsMaterial({size:1,color:sc[pi],transparent:true,opacity:0.6,depthWrite:false}));pts.userData={type:'estream',curve:curve,phases:pph,speed:0.002+Math.random()*0.002};smScene.add(pts);energyStreams.push(pts)})}
@@ -1212,10 +1282,11 @@ function onSmClick(e){var rect=smRenderer.domElement.getBoundingClientRect();smM
 function onSmMove(e){var rect=smRenderer.domElement.getBoundingClientRect();smMouse.x=((e.clientX-rect.left)/rect.width)*2-1;smMouse.y=-((e.clientY-rect.top)/rect.height)*2+1;smRaycaster.setFromCamera(smMouse,smCamera);var h=smRaycaster.intersectObjects(postNodes);var tt=document.getElementById('sm-tip');if(h.length>0){var n=h[0].object,p=n.userData.post;hoveredNode=n;if(p){tt.querySelector('.tt').textContent=p.content.substr(0,40)+'...';tt.querySelector('.tm').textContent=p.author+' · '+p.likes+'赞';tt.style.left=(e.clientX-smRenderer.domElement.getBoundingClientRect().left+14)+'px';tt.style.top=(e.clientY-smRenderer.domElement.getBoundingClientRect().top-14)+'px';tt.classList.add('vis');smRenderer.domElement.style.cursor='pointer'}}else{hoveredNode=null;tt.classList.remove('vis');smRenderer.domElement.style.cursor='default'}}
 function onSmResize(){if(!smRenderer)return;var w=document.getElementById('starmap-wrap');smCamera.aspect=w.clientWidth/w.clientHeight;smCamera.updateProjectionMatrix();smRenderer.setSize(w.clientWidth,w.clientHeight)}
 function renderSmCircles(){var el=document.getElementById('sm-circles');el.innerHTML='';CIRCLES.forEach(function(c){var d=document.createElement('div');d.className='sm-cc'+(c.id===smCurrentCircle.id?' active':'');d.innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+c.color+';margin-right:6px"></span>'+esc(c.name);d.onclick=function(){smCurrentCircle=c;renderSmCircles();renderSmPosts();var g=galaxyGroups[c.id];if(g){var w=new THREE.Vector3();g.getWorldPosition(w);flyTarget=w.clone().add(new THREE.Vector3(8,12,25));flyStart=smCamera.position.clone();flyLookAt=w.clone();flyStartTime=Date.now();smControls.autoRotate=false;setTimeout(function(){smControls.autoRotate=true},5000)}};el.appendChild(d)})}
-function renderSmPosts(){var el=document.getElementById('sm-posts');el.innerHTML='';(MOCK_SM_POSTS[smCurrentCircle.id]||[]).forEach(function(p){var d=document.createElement('div');d.className='sm-pi';d.innerHTML='<div class="pa">'+esc(p.author)+'</div><div class="pc">'+esc(p.content)+'</div>';d.onclick=function(){showSmDetail(p)};el.appendChild(d)})}
+function renderSmPosts(){var el=document.getElementById('sm-posts');el.innerHTML='';var posts=[];if(ringData&&ringData.length){posts=ringData.filter(function(p){return(p.CircleID||p.circle_id||p.ring_id||'')===smCurrentCircle.id})}if(!posts.length)posts=MOCK_SM_POSTS[smCurrentCircle.id]||[];posts.forEach(function(p){var d=document.createElement('div');d.className='sm-pi';d.innerHTML='<div class="pa">'+esc(p.Author||p.author)+'</div><div class="pc">'+esc(p.Content||p.content)+'</div>';d.onclick=function(){showSmDetail(p)};el.appendChild(d)})}
 function showSmDetail(p){
+  var author=p.Author||p.author||'匿名',content=p.Content||p.content||'',likes=p.Likes||p.likes||0,comments=p.CommentsCount||p.comments_count||0,timeStr=p.CreatedAt||p.time||'';
   var r=document.getElementById('sm-right');r.classList.add('vis');
-  r.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h3 style="font-size:13px;font-weight:600">帖子详情</h3><button class="btn btn-s" onclick="document.getElementById(\'sm-right\').classList.remove(\'vis\')">关闭</button></div><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--teal));display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">'+esc(p.author[0])+'</div><div><div style="font-size:12px;font-weight:500;color:var(--accent)">'+esc(p.author)+'</div><div style="font-size:10px;color:var(--text2)">'+p.time+'</div></div></div><div style="font-size:12px;line-height:1.8;color:var(--text2);margin-bottom:12px;padding:10px;border-radius:6px;background:rgba(0,0,0,.03);border:1px solid var(--border)">'+esc(p.content)+'</div><div style="display:flex;gap:8px"><button class="btn btn-s" onclick="toast(\'已点赞\',\'success\')">👍 '+p.likes+'</button><button class="btn btn-s">💬 '+p.comments_count+'</button></div>';
+  r.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h3 style="font-size:13px;font-weight:600">帖子详情</h3><button class="btn btn-s" onclick="document.getElementById(\'sm-right\').classList.remove(\'vis\')">关闭</button></div><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--teal));display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">'+esc(author[0])+'</div><div><div style="font-size:12px;font-weight:500;color:var(--accent)">'+esc(author)+'</div><div style="font-size:10px;color:var(--text2)">'+esc(String(timeStr))+'</div></div></div><div style="font-size:12px;line-height:1.8;color:var(--text2);margin-bottom:12px;padding:10px;border-radius:6px;background:rgba(0,0,0,.03);border:1px solid var(--border)">'+esc(content)+'</div><div style="display:flex;gap:8px"><button class="btn btn-s" onclick="toast(\'已点赞\',\'success\')">👍 '+likes+'</button><button class="btn btn-s">💬 '+comments+'</button></div>';
 }
 
 var OAUTH_TOKEN='',OAUTH_USER=null;
@@ -1302,6 +1373,12 @@ function showUserProfile(){
   document.getElementById('profileAvatar').src=OAUTH_USER.avatar_path||OAUTH_USER.avatar_url||'';
   document.getElementById('profileName').textContent=OAUTH_USER.fullname||OAUTH_USER.name||'用户';
   document.getElementById('profileHeadline').textContent=OAUTH_USER.headline||OAUTH_USER.description||'';
+  var pf=document.getElementById('profileFollowing'),pp=document.getElementById('profileFollowers');
+  pf.textContent='-';pp.textContent='-';
+  if(OAUTH_TOKEN&&!OAUTH_TOKEN.startsWith('mock_')){
+    oauthFetch('/user/followed').then(function(d){var a=Array.isArray(d)?d:(d.data||[]);pf.textContent=a.length}).catch(function(){pf.textContent='?'});
+    oauthFetch('/user/followers').then(function(d){var a=Array.isArray(d)?d:(d.data||[]);pp.textContent=a.length}).catch(function(){pp.textContent='?'});
+  }else{pf.textContent='--';pp.textContent='--'}
   document.getElementById('profileModal').classList.add('show');
 }
 function closeProfile(){document.getElementById('profileModal').classList.remove('show')}
