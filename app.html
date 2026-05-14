@@ -1119,92 +1119,91 @@ function buildChatMsgs(){
 function sendZhidaChat(tid,msg){
   if(!ACCESS_SECRET){updMsg(tid,'请先在设置中配置 Access Secret（从 developer.zhihu.com 获取）');return}
   var msgs=buildChatMsgs();
-  var url=buildUrl('/v1/chat/completions');
   var headers=authHeaders();
-  function tryNonStream(){
-    var body={model:AI_MODEL,messages:msgs,stream:false};
-    return fetch(url,{method:'POST',headers:headers,body:JSON.stringify(body)}).then(function(resp){
-      if(!resp.ok){return resp.text().then(function(t){throw new Error('HTTP '+resp.status+': '+(t||'').slice(0,300))})}
-      return resp.json();
-    }).then(function(d){
-      console.log('[zhida] non-stream response:',JSON.stringify(d).slice(0,500));
-      if(d.error){throw new Error(d.error.message||JSON.stringify(d.error))}
-      var choice=d.choices&&d.choices[0];
-      if(!choice)throw new Error('响应无 choices');
-      var m=choice.message||{};
-      var reason=m.reasoning_content||'';
-      var content=m.content||'';
-      if(!content&&!reason)throw new Error('返回内容为空');
-      var html='';
-      if(reason)html='<details style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reason)+'</div></details>';
-      if(content){try{html+=typeof marked!=='undefined'?marked.parse(content):content}catch(e){html+=content}}
-      if(html)updMsg(tid,html);
-      chatHist.push({role:'assistant',content:content||reason});usage.ai++;svUsage();updHistUI();
-    });
-  }
-  function tryStream(){
-    var body={model:AI_MODEL,messages:msgs,stream:true};
-    return fetch(url,{method:'POST',headers:headers,body:JSON.stringify(body)}).then(function(resp){
-      if(!resp.ok){return resp.text().then(function(t){throw new Error('HTTP '+resp.status+': '+(t||'').slice(0,300))})}
-      if(!resp.body){throw new Error('no-stream-body')}
-      var reader=resp.body.getReader();
-      var decoder=new TextDecoder();
-      var reasonBuf='',contentBuf='',done=false,finalized=false,partial='',rawLog='';
-      function finalize(){
-        if(finalized)return;finalized=true;
-        console.log('[zhida] stream finished. reason:',reasonBuf.length,'content:',contentBuf.length,'raw:',rawLog.length);
-        if(contentBuf){chatHist.push({role:'assistant',content:contentBuf});usage.ai++;svUsage()}
-        else if(reasonBuf&&!contentBuf){updMsg(tid,'AI 思考了但未生成回答，请重试');chatHist.pop()}
-        else{updMsg(tid,'AI 返回内容为空');chatHist.pop()}
-        updHistUI();
-      }
-      function pump(){
-        return reader.read().then(function(result){
-          if(result.done){finalize();return}
-          var chunk=decoder.decode(result.value,{stream:true});
-          rawLog+=chunk;
-          partial+=chunk;
-          var lines=partial.split('\n');
-          partial=lines.pop();
-          lines.forEach(function(line){
-            if(!line||line.startsWith(':'))return;
-            if(!line.startsWith('data: '))return;
-            var data=line.slice(6).trim();
-            if(!data||data==='[DONE]'){done=true;return}
-            try{
-              var j=JSON.parse(data);
-              var choice=j.choices&&j.choices[0];
-              if(choice){
-                var delta=choice.delta;
-                if(delta){
-                  if(delta.reasoning_content)reasonBuf+=delta.reasoning_content;
-                  if(delta.content)contentBuf+=delta.content;
-                }
-                if(choice.finish_reason==='error'){done=true;var e=j.error;contentBuf+='\n\n> 服务端错误: '+(e?e.message:'未知');return}
-              }
-              if(j.error){done=true;contentBuf+='\n\n> API 错误: '+j.error.message;return}
-            }catch(e){}
-          });
+  var directUrl=API_BASE+'/v1/chat/completions';
+  var proxyUrl='https://corsproxy.io/?'+encodeURIComponent(directUrl);
+  function doRequest(targetUrl,streaming){
+    var body={model:AI_MODEL,messages:msgs,stream:!!streaming};
+    updMsg(tid,'<span class="spinner"></span> 连接AI服务中...'+(targetUrl===proxyUrl?' (CORS代理)':' (直连)'));
+    return fetch(targetUrl,{method:'POST',headers:headers,body:JSON.stringify(body)}).then(function(resp){
+      if(!resp.ok){return resp.text().then(function(t){
+        console.log('[zhida] HTTP '+resp.status+' body:',t);
+        throw new Error('HTTP '+resp.status+': '+(t||'').slice(0,300));
+      })}
+      if(streaming&&resp.body){
+        return readStream(resp,tid,msg);
+      }else{
+        return resp.json().then(function(d){
+          console.log('[zhida] non-stream response:',JSON.stringify(d).slice(0,500));
+          if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
+          var choice=d.choices&&d.choices[0];
+          if(!choice)throw new Error('响应无 choices: '+JSON.stringify(d).slice(0,200));
+          var m=choice.message||{};
+          var reason=m.reasoning_content||'';
+          var content=m.content||'';
+          if(!content&&!reason)throw new Error('返回内容为空: '+JSON.stringify(d).slice(0,200));
           var html='';
-          if(reasonBuf&&!contentBuf)html='<details open style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reasonBuf)+'</div></details><div style="margin-top:4px"><span class="spinner"></span> 生成中...</div>';
-          else if(contentBuf){
-            if(reasonBuf)html='<details style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程（'+reasonBuf.length+'字）</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reasonBuf)+'</div></details>';
-            var md=contentBuf;try{md=typeof marked!=='undefined'?marked.parse(contentBuf):contentBuf}catch(e){}
-            html+=md;
-          }
+          if(reason)html='<details style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reason)+'</div></details>';
+          if(content){try{html+=typeof marked!=='undefined'?marked.parse(content):content}catch(e){html+=content}}
           if(html)updMsg(tid,html);
-          if(done)finalize();
-          else return pump();
+          chatHist.push({role:'assistant',content:content||reason});usage.ai++;svUsage();updHistUI();
         });
       }
-      return pump();
     });
   }
-  tryStream().catch(function(streamErr){
-    console.log('[zhida] stream failed ('+streamErr.message+'), trying non-stream...');
-    tryNonStream().catch(function(nonStreamErr){
-      console.log('[zhida] non-stream also failed:',nonStreamErr.message);
-      chatSearchFallback(tid,msg);
+  function readStream(resp,tid,msg){
+    var reader=resp.body.getReader();
+    var decoder=new TextDecoder();
+    var reasonBuf='',contentBuf='',done=false,finalized=false,partial='';
+    function finalize(){
+      if(finalized)return;finalized=true;
+      if(contentBuf){chatHist.push({role:'assistant',content:contentBuf});usage.ai++;svUsage()}
+      else if(reasonBuf&&!contentBuf){chatHist.pop()}
+      updHistUI();
+    }
+    function pump(){
+      return reader.read().then(function(result){
+        if(result.done){finalize();return}
+        var chunk=decoder.decode(result.value,{stream:true});
+        partial+=chunk;
+        var lines=partial.split('\n');partial=lines.pop();
+        lines.forEach(function(line){
+          if(!line||line.startsWith(':'))return;
+          if(!line.startsWith('data: '))return;
+          var data=line.slice(6).trim();
+          if(!data||data==='[DONE]'){done=true;return}
+          try{
+            var j=JSON.parse(data);
+            var choice=j.choices&&j.choices[0];
+            if(choice){
+              var delta=choice.delta;
+              if(delta){if(delta.reasoning_content)reasonBuf+=delta.reasoning_content;if(delta.content)contentBuf+=delta.content}
+              if(choice.finish_reason==='error'){done=true;contentBuf+='\n\n> 服务端错误: '+(j.error?j.error.message:'未知');return}
+            }
+            if(j.error){done=true;contentBuf+='\n\n> API错误: '+j.error.message;return}
+          }catch(e){}
+        });
+        var html='';
+        if(reasonBuf&&!contentBuf)html='<details open style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reasonBuf)+'</div></details><div style="margin-top:4px"><span class="spinner"></span> 生成中...</div>';
+        else if(contentBuf){
+          if(reasonBuf)html='<details style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--text2);font-size:12px">💭 思考过程（'+reasonBuf.length+'字）</summary><div style="padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(reasonBuf)+'</div></details>';
+          var md=contentBuf;try{md=typeof marked!=='undefined'?marked.parse(contentBuf):contentBuf}catch(e){}
+          html+=md;
+        }
+        if(html)updMsg(tid,html);
+        if(done)finalize();else return pump();
+      });
+    }
+    return pump();
+  }
+  doRequest(directUrl,true).catch(function(e1){
+    console.log('[zhida] 直连流式失败:',e1.message);
+    doRequest(directUrl,false).catch(function(e2){
+      console.log('[zhida] 直连非流式失败:',e2.message);
+      doRequest(proxyUrl,false).catch(function(e3){
+        console.log('[zhida] 代理也失败:',e3.message);
+        chatSearchFallback(tid,msg);
+      });
     });
   });
 }
