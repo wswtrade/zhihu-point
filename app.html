@@ -1390,32 +1390,54 @@ function initStarmap(){
   smRenderer=new THREE.WebGLRenderer({antialias:true});smRenderer.setSize(wrap.clientWidth,wrap.clientHeight);smRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
   wrap.insertBefore(smRenderer.domElement,wrap.firstChild);
   smControls=new THREE.OrbitControls(smCamera,smRenderer.domElement);smControls.enableDamping=true;smControls.dampingFactor=0.05;smControls.maxDistance=200;smControls.minDistance=10;smControls.autoRotate=true;smControls.autoRotateSpeed=0.15;
-  smRaycaster=new THREE.Raycaster();
-  var smAmb=new THREE.AmbientLight(0xFFFFFF,0.6);smScene.add(smAmb);
-  var smDir=new THREE.DirectionalLight(0xFFFFFF,1.0);smDir.position.set(5,10,5);smScene.add(smDir);
+  var smRaycaster=new THREE.Raycaster();
+  var smAmb=new THREE.AmbientLight(0xCCDDFF,0.5);smScene.add(smAmb);
+  var smDir=new THREE.DirectionalLight(0xFFFFFF,1.2);smDir.position.set(10,15,8);smScene.add(smDir);
+  var smHemi=new THREE.HemisphereLight(0xAABBFF,0x443322,0.3);smScene.add(smHemi);
   var gltfLoader=new THREE.GLTFLoader();
   gltfLoader.load('kanshan.glb',function(gltf){
     console.log('[kanshan] GLB loaded, scene children:',gltf.scene.children.length);
     var model=gltf.scene;
-    var box=new THREE.Box3().setFromObject(model);
-    var size=box.getSize(new THREE.Vector3());
-    console.log('[kanshan] bbox size:',size.x,size.y,size.z);
-    var maxDim=Math.max(size.x,size.y,size.z);
-    var scale=40/maxDim;
-    model.scale.set(scale,scale,scale);
-    model.position.set(0,-8,0);
-    var meshCount=0;
     model.traverse(function(child){
-      if(child.isMesh){
-        meshCount++;
-        if(child.geometry&&!child.geometry.attributes.normal)child.geometry.computeVertexNormals();
-        child.material=new THREE.MeshPhongMaterial({color:0x0066FF,shininess:60,emissive:0x003399,emissiveIntensity:0.3,flatShading:true});
+      if(child.isMesh&&child.geometry){
+        if(!child.geometry.attributes.normal)child.geometry.computeVertexNormals();
+        child.geometry.computeBoundingSphere();
       }
     });
-    model.userData={type:'kanshan'};
+    var box=new THREE.Box3().setFromObject(model);
+    var size=box.getSize(new THREE.Vector3());
+    var center=box.getCenter(new THREE.Vector3());
+    var maxDim=Math.max(size.x,size.y,size.z);
+    var targetSize=150;
+    var scale=targetSize/maxDim;
+    model.scale.set(scale,scale,scale);
+    model.position.set(0,-(center.y*scale)-6,0);
+    model.traverse(function(child){
+      if(child.isMesh){
+        child.material=new THREE.MeshPhongMaterial({
+          color:0x0066FF,
+          specular:0x6699FF,
+          shininess:120,
+          emissive:0x003399,
+          emissiveIntensity:0.15,
+          flatShading:false
+        });
+      }
+    });
+    model.userData={type:'kanshan',time:0};
     smScene.add(model);
-    var hl=new THREE.DirectionalLight(0x0066FF,0.5);hl.position.set(-3,5,-5);smScene.add(hl);
-    var bl=new THREE.DirectionalLight(0xFFFFFF,1.0);bl.position.set(5,10,5);smScene.add(bl);
+    var rimLight=new THREE.DirectionalLight(0x0066FF,0.7);rimLight.position.set(-12,8,-15);smScene.add(rimLight);
+    var topLight=new THREE.DirectionalLight(0xFFE8CC,0.5);topLight.position.set(0,20,0);smScene.add(topLight);
+    var fillLight=new THREE.DirectionalLight(0x3388FF,0.4);fillLight.position.set(12,5,10);smScene.add(fillLight);
+    var backLight=new THREE.DirectionalLight(0x0044CC,0.6);backLight.position.set(0,10,-15);smScene.add(backLight);
+    var groundGeo=new THREE.CircleGeometry(80,64);
+    var groundMat=new THREE.MeshPhongMaterial({color:0x0066FF,transparent:true,opacity:0.05,side:THREE.DoubleSide});
+    var ground=new THREE.Mesh(groundGeo,groundMat);
+    ground.rotation.x=-Math.PI/2;ground.position.y=model.position.y-2;
+    smScene.add(ground);
+    var glowGeo=new THREE.SphereGeometry(targetSize*0.6,32,32);
+    var glowMat=new THREE.MeshBasicMaterial({color:0x0066FF,transparent:true,opacity:0.03,side:THREE.BackSide});
+    smScene.add(new THREE.Mesh(glowGeo,glowMat));
   },function(progress){if(progress.total)console.log('[kanshan] loading:',Math.round(progress.loaded/progress.total*100)+'%')},function(err){console.log('[kanshan] load FAILED:',err)});
   createSmStars();createSmGalaxies();createSmNebula();createSmStreams();
   smRenderer.domElement.addEventListener('click',onSmClick);smRenderer.domElement.addEventListener('mousemove',onSmMove);
@@ -1456,7 +1478,7 @@ function smTimeReset(){
 function animateSm(){
   if(!smInited)return;requestAnimationFrame(animateSm);
   var t=Date.now()*0.001;
-  smScene.traverse(function(o){if(!o.userData)return;var u=o.userData;if(u.type==='post'){var p=Math.sin(t*1.5+u.pulse)*0.15+1;var ts=u.baseScale*p;if(o===hoveredNode)ts*=1.6;o.scale.lerp(new THREE.Vector3(ts,ts,ts),0.1);o.rotation.y+=0.003}if(u.type==='holo'){o.rotation.z+=u.speed;o.material.opacity=0.35+Math.sin(t+o.rotation.z)*0.12}if(u.type==='estream'){var ps=o.geometry.attributes.position.array;for(var i=0;i<u.phases.length;i++){u.phases[i]=(u.phases[i]+u.speed)%1;var pt=u.curve.getPoint(u.phases[i]);ps[i*3]=pt.x;ps[i*3+1]=pt.y;ps[i*3+2]=pt.z}o.geometry.attributes.position.needsUpdate=true;o.material.opacity=0.5+Math.sin(t*3)*0.2}});
+  smScene.traverse(function(o){if(!o.userData)return;var u=o.userData;if(u.type==='kanshan'){var floatY=Math.sin(t*0.8)*2;o.position.y=o.userData.baseY!==undefined?o.userData.baseY+floatY:o.position.y;if(o.userData.baseY===undefined)o.userData.baseY=o.position.y;o.rotation.y=Math.sin(t*0.3)*0.15}if(u.type==='post'){var p=Math.sin(t*1.5+u.pulse)*0.15+1;var ts=u.baseScale*p;if(o===hoveredNode)ts*=1.6;o.scale.lerp(new THREE.Vector3(ts,ts,ts),0.1);o.rotation.y+=0.003}if(u.type==='holo'){o.rotation.z+=u.speed;o.material.opacity=0.35+Math.sin(t+o.rotation.z)*0.12}if(u.type==='estream'){var ps=o.geometry.attributes.position.array;for(var i=0;i<u.phases.length;i++){u.phases[i]=(u.phases[i]+u.speed)%1;var pt=u.curve.getPoint(u.phases[i]);ps[i*3]=pt.x;ps[i*3+1]=pt.y;ps[i*3+2]=pt.z}o.geometry.attributes.position.needsUpdate=true;o.material.opacity=0.5+Math.sin(t*3)*0.2}});
   for(var si=shockwaves.length-1;si>=0;si--){var sw=shockwaves[si];sw.userData.life++;var pr=sw.userData.life/sw.userData.max;var ss=1+pr*30;sw.scale.set(ss,ss,ss);sw.material.opacity=0.6*(1-pr);sw.lookAt(smCamera.position);if(pr>=1){smScene.remove(sw);sw.geometry.dispose();sw.material.dispose();shockwaves.splice(si,1)}}
   Object.keys(galaxyGroups).forEach(function(id){galaxyGroups[id].rotation.y+=0.0003});
   if(smReplayActive){
