@@ -60,7 +60,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
 .hot-heat{color:var(--accent);font-weight:600}
 .gbox{width:100%;height:calc(100vh - 160px);background:var(--card);border:1px solid var(--border);border-radius:var(--r);position:relative;overflow:hidden}
 .gbox svg{width:100%;height:100%}
-.gtip{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;pointer-events:none;box-shadow:0 3px 12px rgba(0,0,0,.08);max-width:280px;z-index:100;display:none}
+.gtip{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;pointer-events:none;box-shadow:0 3px 12px rgba(0,0,0,.08);max-width:280px;z-index:100;display:none}
 .gctrl{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:10}
 .sbox{display:flex;gap:8px;margin-bottom:12px}
 .sinp{flex:1;padding:8px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);outline:none;font-family:inherit}
@@ -198,7 +198,6 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);backgro
       <div id="kgTimeline" class="gbox" style="padding:20px;overflow-y:auto"><div id="tlContent"></div></div>
       <div id="kgGraph" class="gbox" style="display:none"><svg id="kgSvg"></svg><div id="kgTip" class="gtip"></div><div class="gctrl"><button class="btn btn-s" onclick="zK('in')">+</button><button class="btn btn-s" onclick="zK('out')">-</button><button class="btn btn-s" onclick="zK('reset')">1:1</button></div></div>
       <div id="kg3dWrap" class="gbox" style="display:none"><div id="kg3dTip" class="gtip"></div></div>
-      <div id="kgTimeline" class="gbox" style="display:none;padding:20px;overflow-y:auto"><div id="tlContent"></div></div>
       <div id="kgList" style="display:none"></div>
       <div id="kgEmpty" class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="8" y1="8" x2="10.5" y2="15"/><line x1="16" y1="8" x2="13.5" y2="15"/></svg><h3>输入关键词探索知识脉络</h3><p>同时搜索知乎站内和全网，自动构建关联图谱</p></div>
     </div>
@@ -556,7 +555,7 @@ function renderRadarG(){
   g.append('g').selectAll('line').data(links).enter().append('line').attr('stroke','#E8E0D4').attr('stroke-opacity',.5);
   var node=g.append('g').selectAll('g').data(nodes).enter().append('g').call(d3.drag().on('start',function(e,d){if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y}).on('drag',function(e,d){d.fx=e.x;d.fy=e.y}).on('end',function(e,d){if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
   node.append('circle').attr('r',function(d){return d.r}).attr('fill',function(d,i){return cs(i)}).attr('fill-opacity',.8).attr('stroke','#fff').attr('stroke-width',2)
-    .on('mouseover',function(ev,d){d3.select(this).attr('fill-opacity',1);var tt=document.getElementById('radarTip');tt.innerHTML='<b>'+esc(d.title)+'</b>';tt.style.display='block';tt.style.left=(ev.offsetX+12)+'px';tt.style.top=(ev.offsetY-8)+'px'})
+    .on('mouseover',function(ev,d){d3.select(this).attr('fill-opacity',1);var tt=document.getElementById('radarTip');tt.innerHTML='<b>'+esc(d.title)+'</b>';tt.style.display='block';tt.style.left=Math.min(ev.clientX+12,window.innerWidth-200)+'px';tt.style.top=(ev.clientY-8)+'px'})
     .on('mouseout',function(){d3.select(this).attr('fill-opacity',.8);document.getElementById('radarTip').style.display='none'})
     .on('click',function(ev,d){showHot(d.id)});
   node.append('text').attr('text-anchor','middle').attr('dy',function(d){return d.r+13}).attr('font-size',10).attr('fill','#6B6356').text(function(d){return d.title.length>8?d.title.slice(0,8)+'…':d.title});
@@ -955,7 +954,7 @@ function buildKG(){
   document.getElementById('kgSpin').style.display='inline-block';document.getElementById('kgEmpty').style.display='none';document.getElementById('kgTabs').style.display='flex';kgData={zh:[],gl:[]};
   var p1=ACCESS_SECRET?api('/api/v1/content/zhihu_search?Query='+encodeURIComponent(q)+'&Count=10').then(function(r){console.log('[zhihu_search]:',r);if(r&&r.Code===0&&r.Data&&r.Data.Items){kgData.zh=r.Data.Items;usage.search++;svUsage()}else toast('知乎搜索异常: '+(r&&r.Message||''),'error')}).catch(function(e){console.log('[zhihu_search] err:',e);toast('知乎搜索失败: '+e.message,'error')}):Promise.resolve();
   var p2=(ACCESS_SECRET||APP_KEY)?api('/api/v1/content/global_search?Query='+encodeURIComponent(q)+'&Count=10').then(function(r){console.log('[global_search]:',r);if(r&&r.Code===0&&r.Data&&r.Data.Items){kgData.gl=r.Data.Items;usage.search++;svUsage()}else toast('全网搜索异常: '+(r&&r.Message||''),'error')}).catch(function(e){console.log('[global_search] err:',e);toast('全网搜索失败: '+e.message,'error')}):Promise.resolve();
-  Promise.all([p1,p2]).then(function(){renderTimeline();renderKGGraph(q);renderKGList();document.getElementById('kgSpin').style.display='none';toast('知识脉络已构建','success')});
+  Promise.all([p1,p2]).then(function(){renderTimeline();kgGraphReady=true;renderKGList();document.getElementById('kgSpin').style.display='none';toast('知识脉络已构建','success')});
 }
 function genKnowledgeReport(){
   var q=document.getElementById('kgQ').value.trim();
@@ -977,7 +976,7 @@ function renderKGGraph(q){
   g.append('g').selectAll('line').data(links).enter().append('line').attr('stroke','#E8E0D4').attr('stroke-opacity',.5);
   var node=g.append('g').selectAll('g').data(nodes).enter().append('g').call(d3.drag().on('start',function(e,d){if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y}).on('drag',function(e,d){d.fx=e.x;d.fy=e.y}).on('end',function(e,d){if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
   node.append('circle').attr('r',function(d){return d.r}).attr('fill',function(d){return cs(d.type)}).attr('fill-opacity',.85).attr('stroke','#fff').attr('stroke-width',2).style('cursor',function(d){return d.item?'pointer':'default'})
-    .on('mouseover',function(ev,d){if(d.item){d3.select(this).attr('fill-opacity',1).attr('stroke-width',3);var tt=document.getElementById('kgTip');var excerpt=(d.item.ContentText||d.item.Summary||'').slice(0,80);tt.innerHTML='<b>'+esc(d.item.Title||'')+'</b>'+(excerpt?'<p style="margin:4px 0 0;color:var(--text2);font-size:11px;line-height:1.4">'+esc(excerpt)+'…</p>':'')+'<span style="color:var(--accent);font-size:10px">点击打开 →</span>';tt.style.display='block';tt.style.left=Math.min(ev.offsetX+12,tt.parentElement.clientWidth-290)+'px';tt.style.top=(ev.offsetY-8)+'px'}})
+    .on('mouseover',function(ev,d){if(d.item){d3.select(this).attr('fill-opacity',1).attr('stroke-width',3);var tt=document.getElementById('kgTip');var excerpt=(d.item.ContentText||d.item.Summary||'').slice(0,80);tt.innerHTML='<b>'+esc(d.item.Title||'')+'</b>'+(excerpt?'<p style="margin:4px 0 0;color:var(--text2);font-size:11px;line-height:1.4">'+esc(excerpt)+'…</p>':'')+'<span style="color:var(--accent);font-size:10px">点击打开 →</span>';tt.style.display='block';tt.style.left=Math.min(ev.clientX+12,window.innerWidth-300)+'px';tt.style.top=(ev.clientY-8)+'px'}})
     .on('mouseout',function(){d3.select(this).attr('fill-opacity',.85).attr('stroke-width',2);document.getElementById('kgTip').style.display='none'})
     .on('click',function(ev,d){if(d.item&&d.item.Url){ev.stopPropagation();window.open(d.item.Url,'_blank')}});
   node.append('text').attr('text-anchor','middle').attr('dy',function(d){return d.r+12}).attr('font-size',10).attr('fill','#6B6356').text(function(d){return d.label});
@@ -991,7 +990,8 @@ function renderKGList(){
   gl.slice(0,12).forEach(function(it){h+='<div class="card" style="margin-bottom:0"><div style="font-weight:600;font-size:13px;margin-bottom:4px">'+(it.Url?'<a href="'+esc(it.Url)+'" target="_blank" style="color:var(--text);text-decoration:none">'+esc(it.Title||'')+'</a>':esc(it.Title||''))+'</div><p style="font-size:12px;color:var(--text2);line-height:1.6">'+esc((it.ContentText||it.Summary||'').slice(0,120))+'</p></div>'});
   h+='</div>';el.innerHTML=h;
 }
-  function switchKT(t){document.querySelectorAll('[data-kt]').forEach(function(e){e.classList.toggle('active',e.dataset.kt===t)});document.getElementById('kgTimeline').style.display=t==='timeline'?'block':'none';document.getElementById('kgGraph').style.display=t==='graph'?'block':'none';document.getElementById('kgList').style.display=t==='list'?'block':'none';document.getElementById('kg3dWrap').style.display=t==='3d'?'block':'none';if(t==='3d')renderKG3d();if(t==='timeline')renderTimeline()}
+var kgGraphReady=false;
+  function switchKT(t){document.querySelectorAll('[data-kt]').forEach(function(e){e.classList.toggle('active',e.dataset.kt===t)});document.getElementById('kgTimeline').style.display=t==='timeline'?'block':'none';document.getElementById('kgGraph').style.display=t==='graph'?'block':'none';document.getElementById('kgList').style.display=t==='list'?'block':'none';document.getElementById('kg3dWrap').style.display=t==='3d'?'block':'none';if(t==='graph'&&kgGraphReady)requestAnimationFrame(function(){renderKGGraph(document.getElementById('kgQ').value.trim()||'知识')});if(t==='3d')renderKG3d();if(t==='timeline')renderTimeline()}
 function renderTimeline(){
   var el=document.getElementById('tlContent');
   if(!kgData.zh.length&&!kgData.gl.length){el.innerHTML='<div class="empty"><h3>请先搜索关键词</h3><p>搜索后可查看时间线视图</p></div>';return}
@@ -1070,7 +1070,7 @@ function onKG3dClick(ev){
     }
   }
 }
-function onKG3dMove(ev){
+  function onKG3dMove(ev){
   var wrap=document.getElementById('kg3dWrap');
   var rect=wrap.getBoundingClientRect();
   kg3dMouse.x=((ev.clientX-rect.left)/rect.width)*2-1;
@@ -1085,7 +1085,9 @@ function onKG3dMove(ev){
     if(nd&&nd.item){
       var excerpt=(nd.item.ContentText||nd.item.Summary||'').slice(0,80);
       tt.innerHTML='<b>'+esc(nd.item.Title||'')+'</b>'+(excerpt?'<p style="margin:4px 0 0;color:var(--text2);font-size:11px;line-height:1.4">'+esc(excerpt)+'…</p>':'')+'<span style="color:var(--accent);font-size:10px">点击打开 →</span>';
-      tt.style.display='block';tt.style.left=Math.min(ev.clientX-rect.left+12,wrap.clientWidth-290)+'px';tt.style.top=(ev.clientY-rect.top-8)+'px';
+      tt.style.display='block';
+      tt.style.left=Math.min(ev.clientX+14,window.innerWidth-300)+'px';
+      tt.style.top=(ev.clientY-10)+'px';
     }
     if(kg3dHovered&&kg3dHovered!==obj){kg3dHovered.material.emissive.setHex(0x000000)}
     obj.material.emissive.setHex(0x222222);kg3dHovered=obj;
